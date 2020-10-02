@@ -1,0 +1,24 @@
+# Relevant file/directory paths
+PATHS:
+  RAW_DATA: 'data/raw/'
+  CONSUMPTION_DATA: 'data/preprocessed/consumption_data.csv'
+  PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
+  INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
+  CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
+  MODEL_WEIGHTS: 'results/models/'
+  MODEL_TO_LOAD: 'results/models/model.h5'
+  VISUALIZATIONS: 'img/visualizations/'
+  LOGS: 'results\\logs\\'
+  EXPERIMENTS: 'results/experiments/'
+  TRAIN_SET: 'data/preprocessed/Train_Set.csv'
+  TEST_SET: 'data/preprocessed/Test_Set.csv'
+  SCALER_COL_TRANSFORMER: 'data/serializations/scaler_col_transformer.bin'
+  ORDINAL_COL_TRANSFORMER: 'data/serializations/ordinal_col_transformer.bin'
+  OHE_COL_TRANSFORMER: 'data/serializations/ohe_transformer_sv.bin'
+  PREDICTIONS: './results/predictions/'
+
+DATA:
+  NUMERICAL_FEATS: ['PARCEL_AREA', 'SSF', 'REDUC_FAC', 'NOM', 'BILLING_AREA', 'W_HEC_AF', 'PREMISE_UNITS']
+  CATEGORICAL_FEATS: ['RATE_CLASS', 'METER_SIZE', 'INST_TYPE', 'EST_READ']
+  BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
+                  'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
