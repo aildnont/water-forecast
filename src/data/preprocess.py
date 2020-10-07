@@ -5,6 +5,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
+from sklearn.compose import ColumnTransformer
+from category_encoders import OrdinalEncoder
 
 def load_raw_data(cfg, save_int_df=False):
     '''
@@ -40,9 +42,9 @@ def load_raw_data(cfg, save_int_df=False):
 
     # Fill in missing data
     if 'EST_READ' in cat_feats:
-        raw_df['EST_READ'] = raw_df['EST_READ'].astype('object')    # Ensure all categorical features are strings
+        raw_df['EST_READ'] = raw_df['EST_READ'].astype('str') + '_'     # Force treatment as string
     raw_df[['CONSUMPTION'] + num_feats + bool_feats] = raw_df[['CONSUMPTION'] + num_feats + bool_feats].fillna(0)
-    raw_df[cat_feats] = raw_df[cat_feats].fillna("NULL")
+    raw_df[cat_feats] = raw_df[cat_feats].fillna('MISSING')
 
     if save_int_df:
         raw_df.to_csv(cfg['PATHS']['INTERMEDIATE_DATA'], sep=',', header=True, index_label=False, index=False)
@@ -104,7 +106,7 @@ def calculate_ts_data(cfg, raw_df):
     return daily_df
 
 
-def prepare_for_clustering(cfg, raw_df, eval_date=None):
+def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
     '''
     Create a DataFrame, indexed by client, that contains client attributes as of a given date. Computes clients' monthly
     consumption over the last months. This DataFrame is to be used for clustering clients based on their attributes and
@@ -115,20 +117,26 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None):
     :return: DataFrame of client attributes and monthly consumption over the past year
     '''
 
+    print(raw_df['CONTRACT_ACCOUNT'].nunique())
     if eval_date is None:
         eval_date = pd.to_datetime(cfg['DATA']['EVAL_DATE'])
     min_date = eval_date - relativedelta(years=1)
     raw_df = raw_df.loc[raw_df['END_DATE'] >= min_date]
 
-    client_df = raw_df.sort_values('END_DATE', ascending=False).drop_duplicates(subset='CONTRACT_ACCOUNT', keep='first')
+    # Get a DataFrame indexed by CONTRACT_ACOUNT, a key identifying clients
+    client_df = raw_df.sort_values('END_DATE', ascending=False).drop_duplicates(subset=['CONTRACT_ACCOUNT'], keep='first')
     client_df.set_index('CONTRACT_ACCOUNT', inplace=True)
     raw_df = raw_df[['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION']]
+    cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
+    numcl_feats = cfg['DATA']['NUMERICAL_FEATS']
+    bool_feats = cfg['DATA']['BOOLEAN_FEATS']
 
+    # Estimate monthly consumption over last year for each client
     for m in range(12):
         monthly_cons_feat = 'CONS_' + str(m) + 'm_AGO'
+        numcl_feats += [monthly_cons_feat]
         month_end_date = eval_date - relativedelta(months=m)
         month_start_date = eval_date - relativedelta(months=m+1)
-        month_range = pd.date_range(month_start_date, month_end_date)
         temp_df = raw_df[(raw_df['EFFECTIVE_DATE'].between(month_start_date, month_end_date)) |
                          (raw_df['END_DATE'].between(month_start_date, month_end_date))]
 
@@ -138,7 +146,13 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None):
         temp_df = temp_df.groupby('CONTRACT_ACCOUNT').sum()
         client_df = client_df.join(temp_df[monthly_cons_feat])
 
-    client_df.fillna(0, inplace=True)
+    # Clean up the data and save
+    client_df[cat_feats] = client_df[cat_feats].fillna('MISSING')
+    client_df[numcl_feats + bool_feats] = client_df[numcl_feats + bool_feats].fillna(0)
+    client_df.drop(['EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'], axis=1, inplace=True)
+    client_df = client_df.drop_duplicates()
+    if save_df:
+        client_df.to_csv(cfg['PATHS']['CLIENT_DATA'], sep=',', header=True)
     return client_df
 
 
