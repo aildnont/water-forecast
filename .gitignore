@@ -1,7 +1,7 @@
 data/preprocessed/*
 data/raw/*
 data/serializations/*
-images/visualizations/*
+img/visualizations/*
 results/experiments/*
 results/logs/training/*
 results/logs/hparam_search/*
