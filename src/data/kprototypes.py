@@ -28,9 +28,11 @@ def cluster_clients(k=None, save_centroids=True, save_clusters=True):
         print("No file found at " + cfg['PATHS']['PROCESSED_DATA'] + ". Running preprocessing of client data.")
         raw_df = load_raw_data(cfg)
         client_df = prepare_for_clustering(cfg, raw_df,  save_df=False)
+    excluded_feats = cfg['K-PROTOTYPES']['FEATS_TO_EXCLUDE']
+    client_df.drop(excluded_feats, axis=1, inplace=True)   # Features we don't want to see in clustering
     client_ids = client_df.pop('CONTRACT_ACCOUNT').tolist()
-    cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
-    bool_feats = cfg['DATA']['BOOLEAN_FEATS']
+    cat_feats = [f for f in cfg['DATA']['CATEGORICAL_FEATS'] if f not in excluded_feats]
+    bool_feats = [f for f in cfg['DATA']['BOOLEAN_FEATS'] if f not in excluded_feats]
     ordinal_encoder = OrdinalEncoder()
     client_df[cat_feats] = ordinal_encoder.fit_transform(client_df[cat_feats])
     X = np.array(client_df)

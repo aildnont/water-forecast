@@ -31,9 +31,10 @@ DATA:
 
 # Data clustering
 K-PROTOTYPES:
-  K: 3
+  K: 15
   N_RUNS: 15
   N_JOBS: 5
   K_MIN: 3
   K_MAX: 15
+  FEATS_TO_EXCLUDE: ['RATE_CLASS']
   EXPERIMENT: 'cluster_clients'               # One of {'cluster_clients', 'silhouette_analysis'}
