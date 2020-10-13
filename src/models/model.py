@@ -2,33 +2,16 @@ import pandas as pd
 import numpy as np
 import datetime
 from abc import ABCMeta, abstractmethod
+from src.visualization.visualize import plot_model_evaluation
 
 class ModelStrategy(object):
     __metaclass__ = ABCMeta
 
-
-    @property
-    def univariate(self):
-        '''
-        Boolean property representing whether the model is univariate
-        '''
-        pass
-
-
-    @property
-    def model(self):
-        '''
-        Model object
-        '''
-        pass
-
-
-    @property
-    def train_date(self):
-        '''
-        String describing the date at which the model was fit
-        '''
-        pass
+    def __init__(self, model, univariate, name):
+        self.model = model
+        self.univariate = univariate
+        self.name = name
+        self.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 
 
     @abstractmethod
@@ -36,21 +19,21 @@ class ModelStrategy(object):
         '''
         Abstract method for model fitting
         '''
-        return None
+        pass
 
 
     @abstractmethod
-    def evaulate(self, dataset):
+    def evaulate(self, train_set, test_set):
         '''
         Abstract method for model evaluation
         '''
-        return None
+        pass
 
 
     @abstractmethod
-    def predict(self, X):
+    def forecast(self, periods):
         '''
-        Abstract method for model evaluation
+        Abstract method for forecasting with the model
         '''
         return None
 
@@ -83,7 +66,7 @@ class ModelStrategy(object):
             test_set = dataset[0:test_start_idx]
 
             # Train the model and evaluate performance on test set
-            _ = self.fit(train_set)
+            self.fit(train_set)
             test_metrics = self.evaulate(test_set)
             for metric in test_metrics:
                 if metric in metrics_df.columns:
@@ -99,6 +82,45 @@ class ModelStrategy(object):
             metrics_df.to_csv(file_path, columns=metrics_df.columns, index_label=False, index=False)
         return metrics_df
 
+
+    def evaluate_forecast(self, forecast_df, plot=True, save_dir=None):
+        try:
+            # Residuals
+            forecast_df["residuals"] = forecast_df["gt"] - forecast_df["model"]
+            forecast_df["error"] = forecast_df["gt"] - forecast_df["forecast"]
+            forecast_df["error_pct"] = forecast_df["error"] / forecast_df["gt"]
+
+            # Key metrics
+            metrics = {}
+            metrics['residuals_mean'] = forecast_df["residuals"].mean()
+            metrics['residuals_std'] = forecast_df["residuals"].std()
+            metrics['error_mean'] = forecast_df["error"].mean()
+            metrics['error_std'] = forecast_df["error"].std()
+            metrics['MAE'] = forecast_df["error"].apply(lambda x: np.abs(x)).mean()
+            metrics['MAPE'] = forecast_df["error_pct"].apply(lambda x: np.abs(x)).mean()
+            metrics['MSE'] = forecast_df["error"].apply(lambda x: x ** 2).mean()
+            metrics['RMSE'] = np.sqrt(metrics['MSE'])  # root mean squared error
+
+            # 95% Confidence intervals
+            STD_DEVS = 1.96
+            forecast_df["conf_int_low"] = forecast_df["forecast"] - STD_DEVS * metrics['residuals_std']
+            forecast_df["conf_int_up"] = forecast_df["forecast"] + STD_DEVS * metrics['residuals_std']
+            forecast_df["pred_int_low"] = forecast_df["forecast"] - STD_DEVS * metrics['error_std']
+            forecast_df["pred_int_up"] = forecast_df["forecast"] + STD_DEVS * metrics['error_std']
+
+            if plot:
+                plot_model_evaluation(forecast_df, self.name, metrics, save_fig=True)
+
+            forecast_df = forecast_df[["gt", "model", "residuals", "conf_int_low", "conf_int_up",
+                        "forecast", "error", "pred_int_low", "pred_int_up"]]
+            if save_dir is not None:
+                metrics_df = pd.DataFrame.from_records([metrics])
+                metrics_df.to_csv(save_dir + self.name + '_eval_' + self.train_date + '.csv', sep=',')
+            return forecast_df
+
+        except Exception as e:
+            print(e)
+        return
 
 
 

@@ -25,7 +25,7 @@ def cluster_clients(k=None, save_centroids=True, save_clusters=True):
     try:
         client_df = pd.read_csv(cfg['PATHS']['CLIENT_DATA'])
     except FileNotFoundError:
-        print("No file found at " + cfg['PATHS']['PROCESSED_DATA'] + ". Running preprocessing of client data.")
+        print("No file found at " + cfg['PATHS']['CLIENT_DATA'] + ". Running preprocessing of client data.")
         raw_df = load_raw_data(cfg)
         client_df = prepare_for_clustering(cfg, raw_df,  save_df=False)
     excluded_feats = cfg['K-PROTOTYPES']['FEATS_TO_EXCLUDE']
