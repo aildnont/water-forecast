@@ -48,9 +48,9 @@ def plot_model_evaluation(forecast_df, model_name, metrics, figsize=(20,13), sav
     '''
 
     fig = plt.figure(figsize=figsize)
-    fig.suptitle(model_name, fontsize=20)
+    fig.suptitle(model_name + ' Forecast', fontsize=20)
     ax1 = fig.add_subplot(2, 2, 1)
-    ax2 = fig.add_subplot(2, 2, 2, sharey=ax1)
+    ax2 = fig.add_subplot(2, 2, 2)
     ax3 = fig.add_subplot(2, 2, 3)
     ax4 = fig.add_subplot(2, 2, 4)
 

@@ -30,6 +30,36 @@ DATA:
   EVAL_DATE: '2020-09-17'
   TEST_FRAC: 0.2
 
+# Training experiments
+TRAIN:
+  MODEL: 'arima'
+
+# Hyperparameters specific to individual models
+HPARAMS:
+  PROPHET:
+    COUNTRY: 'CA'
+    HOLIDAYS:
+      Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
+                    '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',
+                    '2022-02-21', '2023-02-20', '2024-02-19']
+      Civic Holiday: ['2008-08-04', '2009-08-03', '2010-08-02', '2011-08-01', '2012-08-06', '2013-08-05',
+                        '2014-08-04', '2015-08-03', '2016-08-01', '2017-08-07', '2018-08-06', '2019-08-05',
+                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05']
+  ARIMA:
+    AUTO_PARAMS: false
+    P: 30
+    D: 0
+    Q: 0
+  SARIMA:
+    AUTO_PARAMS: false
+    TREND_P: 10
+    TREND_D: 2
+    TREND_Q: 0
+    SEASONAL_P: 5
+    SEASONAL_D: 2
+    SEASONAL_Q: 0
+    M: 12
+
 # Data clustering
 K-PROTOTYPES:
   K: 15
@@ -37,5 +67,5 @@ K-PROTOTYPES:
   N_JOBS: 5
   K_MIN: 3
   K_MAX: 15
-  FEATS_TO_EXCLUDE: ['RATE_CLASS']
+  FEATS_TO_EXCLUDE: ['RATE_CLASS', 'NOM', 'REDUC_FAC', 'SSF', 'W_HEC_AF', 'RES_LDM', 'RES_MDM', 'RES_HR']
   EXPERIMENT: 'cluster_clients'               # One of {'cluster_clients', 'silhouette_analysis'}

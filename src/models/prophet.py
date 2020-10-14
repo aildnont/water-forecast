@@ -1,15 +1,25 @@
 from fbprophet import Prophet
-from fbprophet.diagnostics import performance_metrics
+import pandas as pd
 from src.models.model import ModelStrategy
 
 class ProphetModel(ModelStrategy):
 
-    def __init__(self):
+    def __init__(self, hparams):
         univariate = True
-        model = Prophet(yearly_seasonality=True)
-        model.add_country_holidays(country_name='CA')
-        print(model.holidays)
         name = 'Prophet'
+
+        # Build DataFrame of local holidays
+        holiday_dfs = []
+        for holiday in hparams['HOLIDAYS']:
+            holiday_dfs.append(pd.DataFrame({
+                'holiday': holiday,
+                'ds': pd.to_datetime(hparams['HOLIDAYS'][holiday]),
+                'lower_window': 0,
+                'upper_window': 1}))
+        local_holidays = pd.concat(holiday_dfs)
+
+        model = Prophet(yearly_seasonality=True, holidays=local_holidays)
+        model.add_country_holidays(country_name=hparams['COUNTRY'])   # Add country-wide holidays
         super(ProphetModel, self).__init__(model, univariate, name)
 
 
@@ -40,12 +50,12 @@ class ProphetModel(ModelStrategy):
         df_test = test_set.merge(df_prophet[["ds", "yhat"]],
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
-        self.evaluate_forecast(df_forecast, save_dir=save_dir)
-        return
+        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir)
+        return test_metrics
 
 
-    def forecast(self, periods):
-        future_dates = self.model.make_future_dataframe(periods=periods)
+    def forecast(self, days):
+        future_dates = self.model.make_future_dataframe(periods=days)
         return self.model.predict(future_dates)
 
 
