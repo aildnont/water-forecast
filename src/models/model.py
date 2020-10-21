@@ -1,18 +1,19 @@
 import pandas as pd
 import numpy as np
 import datetime
+import os
 from abc import ABCMeta, abstractmethod
 from src.visualization.visualize import plot_model_evaluation
 
 class ModelStrategy(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, model, univariate, name):
+    def __init__(self, model, univariate, name, log_dir=None):
         self.model = model
         self.univariate = univariate
         self.name = name
         self.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-
+        self.log_dir = log_dir
 
     @abstractmethod
     def fit(self, dataset):
@@ -31,7 +32,7 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def forecast(self, days):
+    def forecast(self, days, recent_data=None):
         '''
         Abstract method for forecasting with the model
         '''

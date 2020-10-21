@@ -4,7 +4,7 @@ from src.models.model import ModelStrategy
 
 class ProphetModel(ModelStrategy):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, log_dir=None):
         univariate = True
         name = 'Prophet'
 
@@ -20,7 +20,7 @@ class ProphetModel(ModelStrategy):
 
         model = Prophet(yearly_seasonality=True, holidays=local_holidays)
         model.add_country_holidays(country_name=hparams['COUNTRY'])   # Add country-wide holidays
-        super(ProphetModel, self).__init__(model, univariate, name)
+        super(ProphetModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
     def fit(self, dataset):
@@ -54,7 +54,7 @@ class ProphetModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days):
+    def forecast(self, days, recent_data=None):
         future_dates = self.model.make_future_dataframe(periods=days)
         return self.model.predict(future_dates)
 

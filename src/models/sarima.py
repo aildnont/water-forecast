@@ -4,7 +4,7 @@ from src.models.model import ModelStrategy
 
 class SARIMAModel(ModelStrategy):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, log_dir=None):
         univariate = True
         model = None
         name = 'SARIMA'
@@ -16,7 +16,7 @@ class SARIMAModel(ModelStrategy):
         self.seasonal_d = hparams['SEASONAL_D']
         self.seasonal_q = hparams['SEASONAL_Q']
         self.m = hparams['M']
-        super(SARIMAModel, self).__init__(model, univariate, name)
+        super(SARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
     def fit(self, dataset):
@@ -62,6 +62,6 @@ class SARIMAModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days):
+    def forecast(self, days, recent_data=None):
         predictions = self.model.forecast(steps=days)
         return predictions

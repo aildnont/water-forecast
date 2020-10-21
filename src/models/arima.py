@@ -4,7 +4,7 @@ from src.models.model import ModelStrategy
 
 class ARIMAModel(ModelStrategy):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, log_dir=None):
         univariate = True
         model = None
         name = 'ARIMA'
@@ -12,7 +12,7 @@ class ARIMAModel(ModelStrategy):
         self.p = hparams['P']
         self.d = hparams['D']
         self.q = hparams['Q']
-        super(ARIMAModel, self).__init__(model, univariate, name)
+        super(ARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
     def fit(self, dataset):
@@ -38,7 +38,7 @@ class ARIMAModel(ModelStrategy):
 
     def evaluate(self, train_set, test_set, save_dir=None):
         '''
-        Evaluates performance of SARIMA model on test set
+        Evaluates performance of ARIMA model on test set
         :param train_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param test_set: A Pandas DataFrame with 2 columns: Date and Consumption
         '''
@@ -54,6 +54,6 @@ class ARIMAModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days):
+    def forecast(self, days, recent_data=None):
         predictions = self.model.forecast(steps=days)
         return predictions
