@@ -9,9 +9,9 @@ class ARIMAModel(ModelStrategy):
         model = None
         name = 'ARIMA'
         self.auto_params = hparams['AUTO_PARAMS']
-        self.p = hparams['P']
-        self.d = hparams['D']
-        self.q = hparams['Q']
+        self.p = hparams.get('P', 30)
+        self.d = hparams.get('D', 0)
+        self.q = hparams.get('Q', 0)
         super(ARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 

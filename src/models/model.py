@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import datetime
-import os
 from abc import ABCMeta, abstractmethod
 from src.visualization.visualize import plot_model_evaluation
 

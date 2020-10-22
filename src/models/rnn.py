@@ -14,12 +14,12 @@ class RNNModel(ModelStrategy):
     __metaclass__ = ABCMeta
 
     def __init__(self, hparams, name, log_dir):
-        self.univariate = False
-        self.batch_size = hparams['BATCH_SIZE']
-        self.epochs = hparams['EPOCHS']
-        self.patience = hparams['PATIENCE']
-        self.val_set_size = hparams['VAL_SET_SIZE']
-        self.T_x = hparams['T_X']
+        self.univariate = hparams.get('UNIVARIATE', False)
+        self.batch_size = hparams.get('BATCH_SIZE', 32)
+        self.epochs = hparams.get('EPOCHS', 100)
+        self.patience = hparams.get('PATIENCE', 15)
+        self.val_set_size = hparams.get('VAL_SET_SIZE', 30)
+        self.T_x = hparams.get('T_X', 32)
         self.metrics = [MeanSquaredError(name='mse'), RootMeanSquaredError(name='rmse'), MeanAbsoluteError(name='mae'),
                         MeanAbsolutePercentageError(name='mape')]
         self.standard_scaler = StandardScaler()
@@ -41,6 +41,8 @@ class RNNModel(ModelStrategy):
         :param dataset: A Pandas DataFrame with feature columns and a Consumption column
         '''
         df = dataset.copy()
+        if self.univariate:
+            df = df[['Date', 'Consumption']]
         df.loc[:, dataset.columns != 'Date'] = self.standard_scaler.fit_transform(dataset.loc[:, dataset.columns != 'Date'])
 
         train_df = df[0:-self.val_set_size]
@@ -71,6 +73,10 @@ class RNNModel(ModelStrategy):
         :param train_set: A Pandas DataFrame with feature columns and a Consumption column
         :param test_set: A Pandas DataFrame with feature columns and a Consumption column
         '''
+
+        if self.univariate:
+            train_set = train_set[['Date', 'Consumption']]
+            test_set = test_set[['Date', 'Consumption']]
 
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.transform(train_set.loc[:, train_set.columns != 'Date'])
         test_set.loc[:, test_set.columns != 'Date'] = self.standard_scaler.transform(test_set.loc[:, test_set.columns != 'Date'])
@@ -143,9 +149,9 @@ class LSTMModel(RNNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'LSTM'
-        self.units = hparams['UNITS']
-        self.lr = hparams['LR']
-        self.loss = hparams['LOSS'] if hparams['LOSS'] in ['mae', 'mse', 'rmse'] else 'mse'
+        self.units = hparams.get('UNITS', 128)
+        self.lr = hparams.get('LR', 1e-3)
+        self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(LSTMModel, self).__init__(hparams, name, log_dir)
 
     def define_model(self, input_dim):
@@ -164,9 +170,9 @@ class GRUModel(RNNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'GRU'
-        self.units = hparams['UNITS']
-        self.lr = hparams['LR']
-        self.loss = hparams['LOSS'] if hparams['LOSS'] in ['mae', 'mse', 'rmse'] else 'mse'
+        self.units = hparams.get('UNITS', 128)
+        self.lr = hparams.get('LR', 1e-3)
+        self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(GRUModel, self).__init__(name, log_dir)
 
     def define_model(self, input_dim):

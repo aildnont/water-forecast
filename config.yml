@@ -60,6 +60,7 @@ HPARAMS:
     SEASONAL_Q: 0
     M: 12
   LSTM:
+    UNIVARIATE: true
     T_X: 30
     BATCH_SIZE: 32
     EPOCHS: 100
@@ -69,6 +70,7 @@ HPARAMS:
     LR: 0.001
     LOSS: 'mse'
   GRU:
+    UNIVARIATE: false
     T_X: 30
     BATCH_SIZE: 32
     EPOCHS: 100

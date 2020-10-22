@@ -8,14 +8,14 @@ class SARIMAModel(ModelStrategy):
         univariate = True
         model = None
         name = 'SARIMA'
-        self.auto_params = hparams['AUTO_PARAMS']
-        self.trend_p = hparams['TREND_P']
-        self.trend_d = hparams['TREND_D']
-        self.trend_q = hparams['TREND_Q']
-        self.seasonal_p = hparams['SEASONAL_P']
-        self.seasonal_d = hparams['SEASONAL_D']
-        self.seasonal_q = hparams['SEASONAL_Q']
-        self.m = hparams['M']
+        self.auto_params = hparams.get('AUTO_PARAMS', False)
+        self.trend_p = hparams.get('TREND_P', 10)
+        self.trend_d = hparams.get('TREND_D', 2)
+        self.trend_q = hparams.get('TREND_Q', 0)
+        self.seasonal_p = hparams.get('SEASONAL_P', 5)
+        self.seasonal_d = hparams.get('SEASONAL_D', 2)
+        self.seasonal_q = hparams.get('SEASONAL_Q', 0)
+        self.m = hparams.get('M', 12)
         super(SARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 

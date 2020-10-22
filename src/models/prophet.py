@@ -10,7 +10,7 @@ class ProphetModel(ModelStrategy):
 
         # Build DataFrame of local holidays
         holiday_dfs = []
-        for holiday in hparams['HOLIDAYS']:
+        for holiday in hparams.get('HOLIDAYS', []):
             holiday_dfs.append(pd.DataFrame({
                 'holiday': holiday,
                 'ds': pd.to_datetime(hparams['HOLIDAYS'][holiday]),
