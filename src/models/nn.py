@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, GRU
+from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, GRU, Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorflow.keras.metrics import MeanSquaredError, RootMeanSquaredError, MeanAbsoluteError, MeanAbsolutePercentageError
@@ -10,7 +10,7 @@ import numpy as np
 import os
 from src.models.model import ModelStrategy
 
-class RNNModel(ModelStrategy):
+class NNModel(ModelStrategy):
     __metaclass__ = ABCMeta
 
     def __init__(self, hparams, name, log_dir):
@@ -24,7 +24,7 @@ class RNNModel(ModelStrategy):
                         MeanAbsolutePercentageError(name='mape')]
         self.standard_scaler = StandardScaler()
         model = None
-        super(RNNModel, self).__init__(model, self.univariate, name, log_dir=log_dir)
+        super(NNModel, self).__init__(model, self.univariate, name, log_dir=log_dir)
 
 
     @abstractmethod
@@ -145,7 +145,7 @@ class RNNModel(ModelStrategy):
 
 
 
-class LSTMModel(RNNModel):
+class LSTMModel(NNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'LSTM'
@@ -166,14 +166,14 @@ class LSTMModel(RNNModel):
 
 
 
-class GRUModel(RNNModel):
+class GRUModel(NNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'GRU'
         self.units = hparams.get('UNITS', 128)
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
-        super(GRUModel, self).__init__(name, log_dir)
+        super(GRUModel, self).__init__(hparams, name, log_dir)
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
@@ -185,3 +185,26 @@ class GRUModel(RNNModel):
         print(model.summary())
         return model
 
+
+class CNN1DModel(NNModel):
+
+    def __init__(self, hparams, log_dir=None):
+        name = '1DCNN'
+        self.filters = hparams.get('FILTERS', 128)
+        self.fc_units = hparams.get('FC_UNITS', [32])
+        self.lr = hparams.get('LR', 1e-3)
+        self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
+        super(CNN1DModel, self).__init__(hparams, name, log_dir)
+
+    def define_model(self, input_dim):
+        X_input = Input(shape=input_dim)
+        X = Conv1D(self.filters, activation='relu')(X_input)
+        X = Flatten()(X)
+        for d in self.fc_units:
+            X = Dense(d, activation='relu')(X)
+        Y = Dense(input_dim.shape[3], activation='linear', name='output')(X)
+        model = Model(inputs=X_input, outputs=Y, name=self.name)
+        optimizer = Adam(learning_rate=self.lr)
+        model.compile(loss=self.loss, optimizer=optimizer, metrics=self.metrics)
+        print(model.summary())
+        return model

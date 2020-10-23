@@ -66,9 +66,9 @@ HPARAMS:
     EPOCHS: 100
     PATIENCE: 10
     VAL_SET_SIZE: 30
-    UNITS: 128
     LR: 0.001
     LOSS: 'mse'
+    UNITS: 128
   GRU:
     UNIVARIATE: false
     T_X: 30
@@ -76,9 +76,18 @@ HPARAMS:
     EPOCHS: 100
     PATIENCE: 10
     VAL_SET_SIZE: 30
-    UNITS: 128
     LR: 0.001
     LOSS: 'mse'
+    UNITS: 128
+  1DCNN:
+    UNIVARIATE: true
+    BATCH_SIZE: 32
+    EPOCHS: 100
+    PATIENCE: 10
+    VAL_SET_SIZE: 30
+    LR: 0.001
+    LOSS: 'mse'
+    FC_UNITS: [64, 32]
 
 # Data clustering
 K-PROTOTYPES:

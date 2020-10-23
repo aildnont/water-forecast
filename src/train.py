@@ -4,7 +4,7 @@ import os
 from src.models.prophet import ProphetModel
 from src.models.arima import ARIMAModel
 from src.models.sarima import SARIMAModel
-from src.models.rnn import *
+from src.models.nn import *
 from src.data.preprocess import preprocess_ts
 
 cfg = yaml.full_load(open(os.getcwd() + "/config.yml", 'r'))
@@ -29,7 +29,8 @@ MODELS_DEFS = {
     'ARIMA': ARIMAModel,
     'SARIMA': SARIMAModel,
     'LSTM': LSTMModel,
-    'GRU': GRUModel
+    'GRU': GRUModel,
+    '1DCNN': CNN1DModel
 }
 model_def = MODELS_DEFS.get(cfg['TRAIN']['MODEL'].upper(), lambda: "Invalid model specified in cfg['TRAIN']['MODEL']")
 model = model_def(cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()], cfg['PATHS']['LOGS'])
