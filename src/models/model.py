@@ -116,7 +116,7 @@ class ModelStrategy(object):
             if save_dir is not None:
                 metrics_df = pd.DataFrame.from_records([metrics])
                 metrics_df.to_csv(save_dir + self.name + '_eval_' + self.train_date + '.csv', sep=',')
-            return forecast_df
+            return metrics
 
         except Exception as e:
             print(e)

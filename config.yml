@@ -32,7 +32,7 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'lstm'
+  MODEL: 'random_forest'
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -88,6 +88,15 @@ HPARAMS:
     LR: 0.001
     LOSS: 'mse'
     FC_UNITS: [64, 32]
+  LINEAR_REGRESSION:
+    UNIVARIATE: true
+    T_X: 30
+  RANDOM_FOREST:
+    UNIVARIATE: true
+    T_X: 30
+    N_ESTIMATORS: 100
+    LOSS: 'mse'
+
 
 # Data clustering
 K-PROTOTYPES:
