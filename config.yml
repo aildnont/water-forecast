@@ -6,7 +6,7 @@ PATHS:
   INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
-  MODEL_WEIGHTS: 'results/models/'
+  MODELS: 'results/models/'
   MODEL_TO_LOAD: 'results/models/model.h5'
   VISUALIZATIONS: 'img/visualizations/'
   LOGS: 'results\\logs\\'
@@ -32,7 +32,8 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'random_forest'
+  MODEL: 'lstm'
+  EXPERIMENT: 'train_all'
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -47,16 +48,16 @@ HPARAMS:
                         '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05']
   ARIMA:
     AUTO_PARAMS: false
-    P: 30
+    P: 5
     D: 0
     Q: 0
   SARIMA:
     AUTO_PARAMS: false
-    TREND_P: 10
-    TREND_D: 2
+    TREND_P: 5
+    TREND_D: 0
     TREND_Q: 0
     SEASONAL_P: 5
-    SEASONAL_D: 2
+    SEASONAL_D: 0
     SEASONAL_Q: 0
     M: 12
   LSTM:
@@ -87,6 +88,8 @@ HPARAMS:
     VAL_SET_SIZE: 30
     LR: 0.001
     LOSS: 'mse'
+    FILTERS: 128
+    KERNEL_SIZE: 3
     FC_UNITS: [64, 32]
   LINEAR_REGRESSION:
     UNIVARIATE: true

@@ -1,8 +1,12 @@
 import pmdarima
 from statsmodels.tsa.arima_model import ARIMA
+import os
 from src.models.model import ModelStrategy
 
 class ARIMAModel(ModelStrategy):
+    '''
+    A class for an Autoregressive Integrated Moving Average Model and the standard operations on it
+    '''
 
     def __init__(self, hparams, log_dir=None):
         univariate = True
@@ -57,3 +61,13 @@ class ARIMAModel(ModelStrategy):
     def forecast(self, days, recent_data=None):
         predictions = self.model.forecast(steps=days)
         return predictions
+
+
+    def save_model(self, save_dir):
+        '''
+        Saves the model to disk
+        :param save_dir: Directory in which to save the model
+        '''
+        if self.model:
+            model_path = os.path.join(save_dir, self.name + self.train_date + '.pkl')
+            self.model.save(model_path)  # Serialize and save the model object

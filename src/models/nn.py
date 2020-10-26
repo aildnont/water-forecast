@@ -4,6 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, GRU, Conv1D, Ma
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorflow.keras.metrics import MeanSquaredError, RootMeanSquaredError, MeanAbsoluteError, MeanAbsolutePercentageError
+from tensorflow.keras.models import save_model
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
@@ -11,6 +12,9 @@ import os
 from src.models.model import ModelStrategy
 
 class NNModel(ModelStrategy):
+    '''
+    A class representing a neural network model defined using TensorFlow and the standard operations on it
+    '''
     __metaclass__ = ABCMeta
 
     def __init__(self, hparams, name, log_dir):
@@ -128,6 +132,16 @@ class NNModel(ModelStrategy):
         return preds
 
 
+    def save_model(self, save_dir):
+        '''
+        Saves the model to disk
+        :param save_dir: Directory in which to save the model
+        '''
+        if self.model:
+            model_path = os.path.join(save_dir, self.name + self.train_date + '.h5')
+            save_model(self.model, model_path)  # Save the model's weights
+
+
     def make_windowed_dataset(self, dataset):
         '''
         Make time series datasets. Each example is a window of the last T_x data points and label is data point 1 day
@@ -146,6 +160,9 @@ class NNModel(ModelStrategy):
 
 
 class LSTMModel(NNModel):
+    '''
+    A class representing a recurrent neural network model with a single LSTM layer
+    '''
 
     def __init__(self, hparams, log_dir=None):
         name = 'LSTM'
@@ -167,6 +184,9 @@ class LSTMModel(NNModel):
 
 
 class GRUModel(NNModel):
+    '''
+    A class representing a recurrent neural network model with a single GRU layer
+    '''
 
     def __init__(self, hparams, log_dir=None):
         name = 'GRU'
@@ -178,7 +198,7 @@ class GRUModel(NNModel):
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
         X = GRU(self.units, activation='tanh')(X_input)
-        Y = Dense(input_dim.shape[3], activation='linear', name='output')(X)
+        Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
         model.compile(loss=self.loss, optimizer=optimizer, metrics=self.metrics)
@@ -187,10 +207,14 @@ class GRUModel(NNModel):
 
 
 class CNN1DModel(NNModel):
+    '''
+    A class representing a 1D convolutional neural network model with a single 1D convolutional layer
+    '''
 
     def __init__(self, hparams, log_dir=None):
         name = '1DCNN'
         self.filters = hparams.get('FILTERS', 128)
+        self.kernel_size = hparams.get('KERNEL_SIZE', 3)
         self.fc_units = hparams.get('FC_UNITS', [32])
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
@@ -198,11 +222,11 @@ class CNN1DModel(NNModel):
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
-        X = Conv1D(self.filters, activation='relu')(X_input)
+        X = Conv1D(self.filters, self.kernel_size, activation='relu')(X_input)
         X = Flatten()(X)
         for d in self.fc_units:
             X = Dense(d, activation='relu')(X)
-        Y = Dense(input_dim.shape[3], activation='linear', name='output')(X)
+        Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
         model.compile(loss=self.loss, optimizer=optimizer, metrics=self.metrics)

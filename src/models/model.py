@@ -5,6 +5,10 @@ from abc import ABCMeta, abstractmethod
 from src.visualization.visualize import plot_model_evaluation
 
 class ModelStrategy(object):
+    '''
+    An abstract base class for defining models. The interface to be implemented by subclasses define standard operations
+    on models in data science experiments.
+    '''
     __metaclass__ = ABCMeta
 
     def __init__(self, model, univariate, name, log_dir=None):
@@ -34,6 +38,14 @@ class ModelStrategy(object):
     def forecast(self, days, recent_data=None):
         '''
         Abstract method for forecasting with the model
+        '''
+        return None
+
+
+    @abstractmethod
+    def save_model(self, save_dir):
+        '''
+        Abstract method for serializing the model
         '''
         return None
 
@@ -84,6 +96,15 @@ class ModelStrategy(object):
 
 
     def evaluate_forecast(self, forecast_df, plot=True, save_dir=None):
+        '''
+        Given ground truth data and forecasts, assess the model's performance by computing using time series regression
+        metrics. Optionally visualize the ground truth, residuals and forecasts.
+        :param forecast_df: A DataFrame containing ground truth, predictions on the training set, and predictions from
+                            a test set forecast
+        :param plot: Flag indicating whether to produce a forecast evaluation plot
+        :param save_dir: Directory in which to save a CSV containing forecast metrics
+        :return: A dict of forecast metrics
+        '''
         try:
             # Residuals
             forecast_df["residuals"] = forecast_df["gt"] - forecast_df["model"]

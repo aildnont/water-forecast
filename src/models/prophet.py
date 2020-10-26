@@ -1,8 +1,13 @@
 from fbprophet import Prophet
+from dill import dump
 import pandas as pd
+import os
 from src.models.model import ModelStrategy
 
 class ProphetModel(ModelStrategy):
+    '''
+    A class representing a Prophet model and standard operations on it
+    '''
 
     def __init__(self, hparams, log_dir=None):
         univariate = True
@@ -57,6 +62,16 @@ class ProphetModel(ModelStrategy):
     def forecast(self, days, recent_data=None):
         future_dates = self.model.make_future_dataframe(periods=days)
         return self.model.predict(future_dates)
+
+
+    def save_model(self, save_dir):
+        '''
+        Saves the model to disk
+        :param save_dir: Directory in which to save the model
+        '''
+        if self.model:
+            model_path = os.path.join(save_dir, self.name + self.train_date + '.pkl')
+            dump(self.model, open(model_path, 'wb'))  # Serialize and save the model object
 
 
 

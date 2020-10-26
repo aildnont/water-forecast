@@ -2,11 +2,16 @@ from abc import ABCMeta, abstractmethod
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
+from joblib import dump
 import pandas as pd
 import numpy as np
+import os
 from src.models.model import ModelStrategy
 
 class SKLearnModel(ModelStrategy):
+    '''
+    A class for a model defined using scikit-learn and the standard operations on it
+    '''
     __metaclass__ = ABCMeta
 
     def __init__(self, hparams, name, log_dir):
@@ -110,6 +115,16 @@ class SKLearnModel(ModelStrategy):
         return preds
 
 
+    def save_model(self, save_dir):
+        '''
+        Saves the model to disk
+        :param save_dir: Directory in which to save the model
+        '''
+        if self.model:
+            model_path = os.path.join(save_dir, self.name + self.train_date + '.joblib')
+            dump(self.model, model_path)  # Serialize and save the model object
+
+
     def make_windowed_dataset(self, dataset):
         '''
         Make time series datasets. Each example is a window of the last T_x data points and label is data point 1 day
@@ -129,6 +144,9 @@ class SKLearnModel(ModelStrategy):
 
 
 class LinearRegressionModel(SKLearnModel):
+    '''
+    A class for an ordinary least squares linear regression model
+    '''
 
     def __init__(self, hparams, log_dir=None):
         name = 'LinearRegression'
@@ -144,6 +162,9 @@ class LinearRegressionModel(SKLearnModel):
 
 
 class RandomForestModel(SKLearnModel):
+    '''
+    A class for a random forest regression model
+    '''
 
     def __init__(self, hparams, log_dir=None):
         name = 'RandomForest'
