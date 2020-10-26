@@ -31,7 +31,7 @@ DATA:
 
 # Data clustering
 K-PROTOTYPES:
-  K: 15
+  K: 4
   N_RUNS: 15
   N_JOBS: 5
   K_MIN: 3

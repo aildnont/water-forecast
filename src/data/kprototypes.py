@@ -30,6 +30,7 @@ def cluster_clients(k=None, save_centroids=True, save_clusters=True):
         client_df = prepare_for_clustering(cfg, raw_df,  save_df=False)
     excluded_feats = cfg['K-PROTOTYPES']['FEATS_TO_EXCLUDE']
     client_df.drop(excluded_feats, axis=1, inplace=True)   # Features we don't want to see in clustering
+    client_feats_df = client_df.copy()
     client_ids = client_df.pop('CONTRACT_ACCOUNT').tolist()
     cat_feats = [f for f in cfg['DATA']['CATEGORICAL_FEATS'] if f not in excluded_feats]
     bool_feats = [f for f in cfg['DATA']['BOOLEAN_FEATS'] if f not in excluded_feats]
@@ -63,6 +64,7 @@ def cluster_clients(k=None, save_centroids=True, save_clusters=True):
                                                      np.expand_dims(x1[cat_feat_idxs], axis=0))
     client_clusters += 1  # Enforce that cluster labels are integer range of [1, K]
     clusters_df = pd.DataFrame({'CONTRACT_ACCOUNT': client_ids, 'Cluster Membership': client_clusters})
+    clusters_df = clusters_df.merge(client_feats_df, on='CONTRACT_ACCOUNT', how='left')
     clusters_df.set_index('CONTRACT_ACCOUNT')
 
     # Get centroids of clusters
