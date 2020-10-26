@@ -32,8 +32,8 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'lstm'
-  EXPERIMENT: 'train_all'
+  MODEL: 'prophet'
+  EXPERIMENT: 'train_single'
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -64,7 +64,7 @@ HPARAMS:
     UNIVARIATE: true
     T_X: 30
     BATCH_SIZE: 32
-    EPOCHS: 100
+    EPOCHS: 300
     PATIENCE: 10
     VAL_SET_SIZE: 30
     LR: 0.001
@@ -74,7 +74,7 @@ HPARAMS:
     UNIVARIATE: false
     T_X: 30
     BATCH_SIZE: 32
-    EPOCHS: 100
+    EPOCHS: 300
     PATIENCE: 10
     VAL_SET_SIZE: 30
     LR: 0.001
@@ -83,7 +83,7 @@ HPARAMS:
   1DCNN:
     UNIVARIATE: true
     BATCH_SIZE: 32
-    EPOCHS: 100
+    EPOCHS: 300
     PATIENCE: 10
     VAL_SET_SIZE: 30
     LR: 0.001

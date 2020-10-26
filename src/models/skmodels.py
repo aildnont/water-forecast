@@ -66,25 +66,29 @@ class SKLearnModel(ModelStrategy):
         # Create windowed versions of the training and test sets
         consumption_idx = train_set.drop('Date', axis=1).columns.get_loc('Consumption')   # Index of consumption feature
         train_dates, X_train, Y_train = self.make_windowed_dataset(train_set)
+        test_pred_dates, X_test, Y_test = self.make_windowed_dataset(pd.concat([train_set[-self.T_x:], test_set]))
         test_dates = test_set['Date']
 
         # Make predictions for training set and obtain forecast for test set
         train_preds = self.model.predict(X_train)
+        test_preds = self.model.predict(X_test)
         if len(train_preds.shape) < 2:
             train_preds = np.expand_dims(train_preds, axis=1)
-        test_preds = self.forecast(test_dates.shape[0], recent_data=X_train[-1])
+            test_preds = np.expand_dims(test_preds, axis=1)
+        test_forecast = self.forecast(test_dates.shape[0], recent_data=X_train[-1])
 
         # Rescale data
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.inverse_transform(train_set.loc[:, train_set.columns != 'Date'])
         test_set.loc[:, test_set.columns != 'Date'] = self.standard_scaler.inverse_transform(test_set.loc[:, test_set.columns != 'Date'])
         train_preds = self.standard_scaler.inverse_transform(train_preds)
         test_preds = self.standard_scaler.inverse_transform(test_preds)
+        test_forecast = self.standard_scaler.inverse_transform(test_forecast)
 
         # Create a DataFrame of combined training set predictions and test set forecast with ground truth
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
         df_test = pd.DataFrame({'ds': test_dates, 'gt': test_set['Consumption'],
-                                 'forecast': test_preds[:,consumption_idx]})
+                                 'forecast': test_forecast[:,consumption_idx], 'test_pred': test_preds[:,consumption_idx]})
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast

@@ -60,8 +60,12 @@ def plot_model_evaluation(forecast_df, model_name, metrics, figsize=(20,13), sav
     ax1.set(xlabel=None)
 
     # Plot test performance
-    forecast_df[pd.isnull(forecast_df["model"])][["gt", "forecast"]].plot(color=["black", "red"], title="Test Set Forecast",
-                                                          grid=True, ax=ax2)
+    if "test_pred" in forecast_df.columns:
+        forecast_df[pd.isnull(forecast_df["model"])][["gt", "forecast", "test_pred"]].plot(color=["black", "red", "yellow"],
+                                                                              title="Test Set Forecast", grid=True, ax=ax2)
+    else:
+        forecast_df[pd.isnull(forecast_df["model"])][["gt", "forecast"]].plot(color=["black", "red"],
+                                                                              title="Test Set Forecast", grid=True, ax=ax2)
     ax2.fill_between(x=forecast_df.index, y1=forecast_df['pred_int_low'], y2=forecast_df['pred_int_up'], color='b', alpha=0.2)
     ax2.fill_between(x=forecast_df.index, y1=forecast_df['conf_int_low'], y2=forecast_df['conf_int_up'], color='b', alpha=0.3)
     ax2.set(xlabel=None)
