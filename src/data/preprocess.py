@@ -153,10 +153,11 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
     return client_df
 
 
-def preprocess_ts(cfg=None):
+def preprocess_ts(cfg=None, save_df=True):
     '''
     Transform raw water demand data into a time series dataset ready to be fed into a model.
     :param cfg: project config
+    :param save_df: Flag indicating whether to save the preprocessed data
     '''
 
     run_start = datetime.today()
@@ -165,12 +166,12 @@ def preprocess_ts(cfg=None):
         cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
 
     raw_df = load_raw_data(cfg)
-    client_df = prepare_for_clustering(cfg, raw_df)
-    #daily_df = calculate_ts_data(cfg, raw_df)
-    #daily_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
+    daily_df = calculate_ts_data(cfg, raw_df)
+    if save_df:
+        daily_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
 
     print("Done. Runtime = ", ((datetime.today() - run_start).seconds / 60), " min")
-    return
+    return daily_df
 
 if __name__ == '__main__':
-    preprocess_ts()
+    df = preprocess_ts()

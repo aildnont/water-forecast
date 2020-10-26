@@ -6,7 +6,7 @@ PATHS:
   INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
-  MODEL_WEIGHTS: 'results/models/'
+  MODELS: 'results/models/'
   MODEL_TO_LOAD: 'results/models/model.h5'
   VISUALIZATIONS: 'img/visualizations/'
   LOGS: 'results\\logs\\'
@@ -28,13 +28,85 @@ DATA:
   BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
                   'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
   EVAL_DATE: '2020-09-17'
+  TEST_FRAC: 0.2
+
+# Training experiments
+TRAIN:
+  MODEL: 'prophet'
+  EXPERIMENT: 'train_single'
+
+# Hyperparameters specific to individual models
+HPARAMS:
+  PROPHET:
+    COUNTRY: 'CA'
+    HOLIDAYS:
+      Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
+                    '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',
+                    '2022-02-21', '2023-02-20', '2024-02-19']
+      Civic Holiday: ['2008-08-04', '2009-08-03', '2010-08-02', '2011-08-01', '2012-08-06', '2013-08-05',
+                        '2014-08-04', '2015-08-03', '2016-08-01', '2017-08-07', '2018-08-06', '2019-08-05',
+                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05']
+  ARIMA:
+    AUTO_PARAMS: false
+    P: 5
+    D: 0
+    Q: 0
+  SARIMA:
+    AUTO_PARAMS: false
+    TREND_P: 5
+    TREND_D: 0
+    TREND_Q: 0
+    SEASONAL_P: 5
+    SEASONAL_D: 0
+    SEASONAL_Q: 0
+    M: 12
+  LSTM:
+    UNIVARIATE: true
+    T_X: 30
+    BATCH_SIZE: 32
+    EPOCHS: 300
+    PATIENCE: 10
+    VAL_SET_SIZE: 30
+    LR: 0.001
+    LOSS: 'mse'
+    UNITS: 128
+  GRU:
+    UNIVARIATE: false
+    T_X: 30
+    BATCH_SIZE: 32
+    EPOCHS: 300
+    PATIENCE: 10
+    VAL_SET_SIZE: 30
+    LR: 0.001
+    LOSS: 'mse'
+    UNITS: 128
+  1DCNN:
+    UNIVARIATE: true
+    BATCH_SIZE: 32
+    EPOCHS: 300
+    PATIENCE: 10
+    VAL_SET_SIZE: 30
+    LR: 0.001
+    LOSS: 'mse'
+    FILTERS: 128
+    KERNEL_SIZE: 3
+    FC_UNITS: [64, 32]
+  LINEAR_REGRESSION:
+    UNIVARIATE: true
+    T_X: 30
+  RANDOM_FOREST:
+    UNIVARIATE: true
+    T_X: 30
+    N_ESTIMATORS: 100
+    LOSS: 'mse'
+
 
 # Data clustering
 K-PROTOTYPES:
   K: 4
   N_RUNS: 15
-  N_JOBS: 5
+  N_JOBS: 3
   K_MIN: 3
-  K_MAX: 15
-  FEATS_TO_EXCLUDE: ['RATE_CLASS']
+  K_MAX: 12
+  FEATS_TO_EXCLUDE: ['RATE_CLASS', 'NOM', 'REDUC_FAC', 'SSF', 'W_HEC_AF', 'RES_LDM', 'RES_MDM', 'RES_HR']
   EXPERIMENT: 'cluster_clients'               # One of {'cluster_clients', 'silhouette_analysis'}
