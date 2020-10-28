@@ -1,5 +1,6 @@
 data/preprocessed/*
 data/raw/*
+data/raw_test/*
 data/serializations/*
 img/visualizations/*
 results/experiments/*

@@ -130,7 +130,7 @@ class NNModel(ModelStrategy):
         x = recent_data
         for i in range(days):
             preds[i] = self.model.predict(np.expand_dims(x, axis=0))
-            x = np.roll(x, 1, axis=0)
+            x = np.roll(x, -1, axis=0)
             x[-1] = preds[i]    # Prediction becomes latest data point in the example
         return preds
 
@@ -170,13 +170,19 @@ class LSTMModel(NNModel):
     def __init__(self, hparams, log_dir=None):
         name = 'LSTM'
         self.units = hparams.get('UNITS', 128)
+        self.dropout = hparams.get('DROPOUT', 0.25)
+        self.fc_units = hparams.get('FC_UNITS', [32])
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(LSTMModel, self).__init__(hparams, name, log_dir)
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
-        X = LSTM(self.units, activation='tanh')(X_input)
+        X = LSTM(self.units, activation='tanh', return_sequences=True)(X_input)
+        X = Flatten()(X)
+        for d in self.fc_units:
+            X = Dense(d, activation='relu')(X)
+            X = Dropout(self.dropout)(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
@@ -194,13 +200,19 @@ class GRUModel(NNModel):
     def __init__(self, hparams, log_dir=None):
         name = 'GRU'
         self.units = hparams.get('UNITS', 128)
+        self.dropout = hparams.get('DROPOUT', 0.25)
+        self.fc_units = hparams.get('FC_UNITS', [32])
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(GRUModel, self).__init__(hparams, name, log_dir)
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
-        X = GRU(self.units, activation='tanh')(X_input)
+        X = GRU(self.units, activation='tanh', return_sequences=True)(X_input)
+        X = Flatten()(X)
+        for d in self.fc_units:
+            X = Dense(d, activation='relu')(X)
+            X = Dropout(self.dropout)(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
@@ -219,6 +231,7 @@ class CNN1DModel(NNModel):
         self.filters = hparams.get('FILTERS', 128)
         self.kernel_size = hparams.get('KERNEL_SIZE', 3)
         self.fc_units = hparams.get('FC_UNITS', [32])
+        self.dropout = hparams.get('DROPOUT', 0.25)
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(CNN1DModel, self).__init__(hparams, name, log_dir)
@@ -229,6 +242,7 @@ class CNN1DModel(NNModel):
         X = Flatten()(X)
         for d in self.fc_units:
             X = Dense(d, activation='relu')(X)
+            X = Dropout(self.dropout)(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
