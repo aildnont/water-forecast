@@ -39,6 +39,8 @@ def load_dataset(cfg):
     # Define training and test sets
     train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
     test_df = df[int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0]):]
+    print('Size of training set: ', train_df.shape[0])
+    print('Size of test set: ', test_df.shape[0])
     return train_df, test_df
 
 

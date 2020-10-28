@@ -15,7 +15,7 @@ def load_raw_data(cfg, save_int_df=False):
     cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
     num_feats = cfg['DATA']['NUMERICAL_FEATS']
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
-    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA'] + "/**/*.csv")
+    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA'] + "/*.csv")
     raw_cons_dfs = []
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
@@ -87,6 +87,7 @@ def calculate_ts_data(cfg, raw_df):
             return 0
 
     # Populating features for daily prediction
+    print('Calculating estimates for daily consumption.')
     for date in tqdm(date_range):
         daily_snapshot = raw_df.loc[(raw_df['EFFECTIVE_DATE'] <= date) & (raw_df['END_DATE'] > date)]
         for f in num_feats:
@@ -98,8 +99,12 @@ def calculate_ts_data(cfg, raw_df):
             fractions = daily_snapshot[f].value_counts(normalize=True)
             for val, fraction in fractions.items():
                 daily_df.loc[date, f + '_' + str(val)] = fraction
-        daily_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
-                     row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
+        try:
+            daily_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
+                         row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
+        except Exception as e:
+            print(date, e)
+            daily_df.loc[date, 'Consumption'] = 0
     return daily_df
 
 

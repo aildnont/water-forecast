@@ -32,8 +32,8 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'prophet'
-  EXPERIMENT: 'train_single'
+  MODEL: 'lstm'
+  EXPERIMENT: 'train_all'
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -49,54 +49,60 @@ HPARAMS:
   ARIMA:
     AUTO_PARAMS: false
     P: 5
-    D: 0
-    Q: 0
+    D: 1
+    Q: 7
   SARIMA:
     AUTO_PARAMS: false
     TREND_P: 5
-    TREND_D: 0
-    TREND_Q: 0
-    SEASONAL_P: 5
-    SEASONAL_D: 0
-    SEASONAL_Q: 0
-    M: 12
+    TREND_D: 1
+    TREND_Q: 7
+    SEASONAL_P: 1
+    SEASONAL_D: 1
+    SEASONAL_Q: 1
+    M: 365
   LSTM:
     UNIVARIATE: true
-    T_X: 30
+    T_X: 365
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 30
+    VAL_SET_SIZE: 90
     LR: 0.001
     LOSS: 'mse'
-    UNITS: 128
+    UNITS: 32
+    DROPOUT: 0.25
+    FC_UNITS: [128]
   GRU:
-    UNIVARIATE: false
-    T_X: 30
+    UNIVARIATE: true
+    T_X: 365
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 30
+    VAL_SET_SIZE: 90
     LR: 0.001
     LOSS: 'mse'
-    UNITS: 128
+    UNITS: 16
+    DROPOUT: 0.25
+    FC_UNITS: [128]
   1DCNN:
     UNIVARIATE: true
+    T_X: 365
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 30
+    VAL_SET_SIZE: 90
     LR: 0.001
     LOSS: 'mse'
-    FILTERS: 128
+    FILTERS: 16
     KERNEL_SIZE: 3
-    FC_UNITS: [64, 32]
+    FC_UNITS: [16, 8]
+    DROPOUT: 0.25
   LINEAR_REGRESSION:
     UNIVARIATE: true
-    T_X: 30
+    T_X: 365
   RANDOM_FOREST:
     UNIVARIATE: true
-    T_X: 30
+    T_X: 365
     N_ESTIMATORS: 100
     LOSS: 'mse'
 
