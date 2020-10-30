@@ -148,4 +148,84 @@ def client_box_plot(client_df, save_fig=False):
     return
 
 
+def client_cmptn_by_rc_violin_plot(client_df, save_fig=False):
+    '''
+    Produces a violin plot for consumption by client in the most recent month stratified by rate class
+    :param client_df: A DataFrame indexed by client identifier
+    :param save_fig: Flag indicating whether to save the figure
+    '''
+    fig, axes = plt.subplots()
+    sns.violinplot(x=client_df['CONS_0m_AGO'], y=client_df['RATE_CLASS'], palette="Set2", scale='area', orient='h',
+                   linewidth=0.2, ax=axes)
+    axes.set_yticklabels(axes.get_yticklabels(), fontsize=12)
+    axes.set_xlabel('Consumption in last month [m^3]', fontsize=20, labelpad=10)
+    axes.set_ylabel('Rate Class', fontsize=20, labelpad=10)
+    fig.suptitle('Violin plot for consumption in recent month grouped by rate class', fontsize=30)
+    fig.tight_layout(pad=1, rect=(0,0.05,1,0.95))
+    if save_fig:
+        plt.savefig(cfg['PATHS']['DATA_VISUALIZATIONS'] + 'violin_plot_rate_class' +
+                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+    return
 
+
+def get_client_dataset_stats(client_df, save_fig=False):
+    '''
+    Obtain general statistics for features in the client dataset and create a summary figure
+    :param client_df: A DataFrame indexed by client identifier
+    :param save_fig: Flag indicating whether to save the figure
+    '''
+    cat_feats = [f for f in cfg['DATA']['CATEGORICAL_FEATS'] if f in client_df.columns]
+    bool_feats = [f for f in cfg['DATA']['BOOLEAN_FEATS'] if f in client_df.columns]
+    num_feats = [f for f in cfg['DATA']['NUMERICAL_FEATS'] if f in client_df.columns]
+    feats = cat_feats + bool_feats + num_feats
+    n_feats = len(feats)
+
+    n_rows = math.floor(math.sqrt(n_feats))
+    n_cols = math.ceil(math.sqrt(n_feats))
+    fig, axes = plt.subplots(n_rows, n_cols)
+
+    def label_function(val):
+        return f'{val / 100 * len(client_df):.0f}%'
+    idx = 0
+    for i in range(n_rows):
+        for j in range(n_cols):
+            if feats[idx] in num_feats:
+                sns.kdeplot(data=client_df, x=feats[idx], palette="Set2", ax=axes[i, j])
+                mean = client_df[feats[idx]].mean()
+                median = client_df[feats[idx]].median()
+                std = client_df[feats[idx]].std()
+                axes[i, j].axvline(mean, color='r', linestyle='-', linewidth=0.8, label='mean=' + '{:.1e}'.format(mean))
+                axes[i, j].axvline(median, color='g', linestyle='-', linewidth=0.8, label='median=' + '{:.1e}'.format(median))
+                axes[i, j].axvline(mean - std, color='r', linestyle='--', linewidth=0.8, label='+/- std' + '{:.1e}'.format(std))
+                axes[i, j].axvline(mean + std, color='r', linestyle='--', linewidth=0.8)
+                axes[i, j].legend(fontsize=8)
+                axes[i, j].set_title(feats[idx], fontsize=14)
+                axes[i, j].set_xticklabels(axes[i, j].get_xticklabels(), rotation=45, ha='right')
+            else:
+                mode = client_df[feats[idx]].mode()
+                sns.countplot(data=client_df, x=feats[idx], ax=axes[i, j], palette='Set3')
+                axes[i, j].set_xticklabels(axes[i, j].get_xticklabels(), rotation=45, ha='right')
+                axes[i, j].text(0.6, 0.9, 'mode=' + str(mode[0]), transform = axes[i, j].transAxes, fontsize=8)
+                axes[i, j].set_title(feats[idx], fontsize=14)
+            if idx < n_feats - 1:
+                idx += 1
+            else:
+                break
+    fig.suptitle('General statistics for client data', fontsize=20, y=0.99)
+    fig.tight_layout(pad=1, rect=(0, 0, 1, 0.95))
+    if save_fig:
+        plt.savefig(cfg['PATHS']['DATA_VISUALIZATIONS'] + 'client_general_visualization' +
+                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+    return
+
+
+
+if __name__ == '__main__':
+    forecast_df = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
+    #consumption_correlation_matrix(forecast_df, save_fig=False)
+
+    client_df = pd.read_csv(cfg['PATHS']['CLIENT_DATA'])
+    plt.clf()
+    #client_box_plot(client_df, save_fig=True)
+    #client_cmptn_by_rc_violin_plot(client_df, save_fig=True)
+    get_client_dataset_stats(client_df, save_fig=True)
