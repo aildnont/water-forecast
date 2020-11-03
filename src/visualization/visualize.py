@@ -168,7 +168,7 @@ def client_cmptn_by_rc_violin_plot(client_df, save_fig=False):
     return
 
 
-def get_client_dataset_stats(client_df, save_fig=False):
+def visualize_client_dataset_stats(client_df, save_fig=False):
     '''
     Obtain general statistics for features in the client dataset and create a summary figure
     :param client_df: A DataFrame indexed by client identifier
@@ -184,8 +184,6 @@ def get_client_dataset_stats(client_df, save_fig=False):
     n_cols = math.ceil(math.sqrt(n_feats))
     fig, axes = plt.subplots(n_rows, n_cols)
 
-    def label_function(val):
-        return f'{val / 100 * len(client_df):.0f}%'
     idx = 0
     for i in range(n_rows):
         for j in range(n_cols):
@@ -200,32 +198,38 @@ def get_client_dataset_stats(client_df, save_fig=False):
                 axes[i, j].axvline(mean + std, color='r', linestyle='--', linewidth=0.8)
                 axes[i, j].legend(fontsize=8)
                 axes[i, j].set_title(feats[idx], fontsize=14)
-                axes[i, j].set_xticklabels(axes[i, j].get_xticklabels(), rotation=45, ha='right')
             else:
                 mode = client_df[feats[idx]].mode()
                 sns.countplot(data=client_df, x=feats[idx], ax=axes[i, j], palette='Set3')
                 axes[i, j].set_xticklabels(axes[i, j].get_xticklabels(), rotation=45, ha='right')
-                axes[i, j].text(0.6, 0.9, 'mode=' + str(mode[0]), transform = axes[i, j].transAxes, fontsize=8)
+                axes[i, j].text(0.6, 0.9, 'mode=' + str(mode[0]), transform=axes[i, j].transAxes, fontsize=8)
                 axes[i, j].set_title(feats[idx], fontsize=14)
             if idx < n_feats - 1:
                 idx += 1
             else:
                 break
     fig.suptitle('General statistics for client data', fontsize=20, y=0.99)
-    fig.tight_layout(pad=1, rect=(0, 0, 1, 0.95))
+    fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
     if save_fig:
         plt.savefig(cfg['PATHS']['DATA_VISUALIZATIONS'] + 'client_general_visualization' +
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return
 
 
-
-if __name__ == '__main__':
-    forecast_df = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
-    #consumption_correlation_matrix(forecast_df, save_fig=False)
-
-    client_df = pd.read_csv(cfg['PATHS']['CLIENT_DATA'])
+def produce_data_visualizations(preprocessed_path=None, client_path=None):
+    '''
+    Produces a series of data visualizations for client data and preprocessed consumption data.
+    :param preprocessed_path: Path of preprocessed data CSV
+    :param client_path: Path of client data CSV
+    '''
+    if preprocessed_path is None:
+        preprocessed_df = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
+    if client_path is None:
+        client_df = pd.read_csv(cfg['PATHS']['CLIENT_DATA'])
     plt.clf()
-    #client_box_plot(client_df, save_fig=True)
-    #client_cmptn_by_rc_violin_plot(client_df, save_fig=True)
-    get_client_dataset_stats(client_df, save_fig=True)
+    correlation_matrix(preprocessed_df, save_fig=True)
+    plt.clf()
+    client_box_plot(client_df, save_fig=True)
+    plt.clf()
+    visualize_client_dataset_stats(client_df, save_fig=True)
+    return
