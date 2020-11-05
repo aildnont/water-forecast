@@ -33,8 +33,10 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'arima'
-  EXPERIMENT: 'train_single'
+  MODEL: 'prophet'
+  EXPERIMENT: 'hparam_search'
+  N_FOLDS: 5
+  NONTUNEABLES: ['AUTO_PARAMS', 'CHANGEPOINT_RANGE', 'VAL_FRAC']
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -72,7 +74,7 @@ HPARAMS:
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 90
+    VAL_FRAC: 0.1
     LR: 0.001
     LOSS: 'mse'
     UNITS: 32
@@ -84,7 +86,7 @@ HPARAMS:
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 90
+    VAL_FRAC: 0.1
     LR: 0.001
     LOSS: 'mse'
     UNITS: 16
@@ -96,11 +98,13 @@ HPARAMS:
     BATCH_SIZE: 32
     EPOCHS: 300
     PATIENCE: 10
-    VAL_SET_SIZE: 90
+    VAL_FRAC: 0.1
     LR: 0.001
     LOSS: 'mse'
     FILTERS: 16
     KERNEL_SIZE: 3
+    STRIDE: 2
+    N_CONV_LAYERS: 2
     FC_UNITS: [16, 8]
     DROPOUT: 0.25
   LINEAR_REGRESSION:
@@ -112,6 +116,79 @@ HPARAMS:
     N_ESTIMATORS: 100
     LOSS: 'mse'
 
+HPARAM_SEARCH:
+  PROPHET:
+    CHANGEPOINT_PRIOR_SCALE:
+      TYPE: 'float_log'
+      RANGE: [-6.908, -0.693]   # ln([0.001, 0.05])
+    SEASONALITY_PRIOR_SCALE:
+      TYPE: 'float_log'
+      RANGE: [-4.605, 2.303]    # ln([0.01, 10])
+    HOLIDAYS_PRIOR_SCALE:
+      TYPE: 'float_log'
+      RANGE: [-4.605, 2.303]    # ln([0.01, 10])
+    SEASONALITY_MODE:
+      TYPE: 'set'
+      RANGE: ['additive', 'multiplicative']
+  LSTM:
+    T_X:
+      TYPE: 'int_uniform'
+      RANGE: [30, 365]
+    BATCH_SIZE:
+      TYPE: 'set'
+      RANGE: [16, 32, 64]
+    PATIENCE:
+      TYPE: 'int_uniform'
+      RANGE: [5, 15]
+    LR:
+      TYPE: 'float_log'
+      RANGE: [-11.513, -4.605]    # ln([1e-5, 1e-2])
+    LOSS:
+      TYPE: 'set'
+      RANGE: ['mse', 'mae', 'huber_loss']
+    UNITS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64, 128]
+    DROPOUT:
+      TYPE: 'float_uniform'
+      RANGE: [0.0, 0.5]
+    FC_UNITS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64]
+  1DCNN:
+    T_X:
+      TYPE: 'int_uniform'
+      RANGE: [30, 365]
+    BATCH_SIZE:
+      TYPE: 'set'
+      RANGE: [16, 32, 64]
+    PATIENCE:
+      TYPE: 'int_uniform'
+      RANGE: [5, 15]
+    LR:
+      TYPE: 'float_log'
+      RANGE: [-11.513, -4.605]   # ln([1e-5, 1e-2])
+    LOSS:
+      TYPE: 'set'
+      RANGE: ['mse', 'mae', 'huber_loss']
+    FILTERS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64, 128]
+    KERNEL_SIZE:
+      TYPE: 'set'
+      RANGE: [3, 5]
+    STRIDE:
+      TYPE: 'int_uniform'
+      RANGE: [1, 2]
+    N_CONV_LAYERS:
+      TYPE: 'int_uniform'
+      RANGE: [1, 5]
+    DROPOUT:
+      TYPE: 'float_uniform'
+      RANGE: [0.0, 0.5]
+    FC_UNITS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64]
 
 # Data clustering
 K-PROTOTYPES:

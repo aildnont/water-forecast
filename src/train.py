@@ -2,6 +2,8 @@ import pandas as pd
 import yaml
 import os
 import datetime
+from sklearn.model_selection import TimeSeriesSplit
+from hyperopt import hp, fmin, tpe, STATUS_OK, Trials
 from src.models.prophet import ProphetModel
 from src.models.arima import ARIMAModel
 from src.models.sarima import SARIMAModel
@@ -122,6 +124,93 @@ def train_all(cfg, save_models=False, write_logs=False):
     return metrics_df
 
 
+def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, file_path=None):
+    '''
+    Perform a nested cross-validation with day-forward chaining. Results are saved in CSV format.
+    :param cfg: project config
+    :param dataset: A DataFrame consisting of the entire dataset
+    :param n_folds: Number of folds for cross validation
+    :param metrics: List of metrics to keep track of
+    :return DataFrame of metrics
+    '''
+
+    n_folds = cfg['TRAIN']['N_FOLDS']
+    metrics_df = pd.DataFrame(np.zeros((n_folds + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
+    metrics_df['Fold'] = list(range(1, n_folds + 1)) + ['mean', 'std']
+    ts_cv = TimeSeriesSplit(n_splits=n_folds)
+    model_name = cfg['TRAIN']['MODEL'].upper() if model_name is None else model_name
+    hparams = cfg['HPARAMS'][model_name] if hparams is None else hparams
+
+    model_def = MODELS_DEFS.get(model_name, lambda: "Invalid model specified in cfg['TRAIN']['MODEL']")
+
+    # Train a model n_folds times with different folds
+    cur_fold = 0
+    for train_index, test_index in ts_cv.split(dataset):
+        model = model_def(hparams)
+        model.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+
+        # Separate into training and test sets
+        train_df, test_df = dataset.iloc[train_index], dataset.iloc[test_index]
+        if model.univariate:
+            train_df = train_df[['Date', 'Consumption']]
+            test_df = test_df[['Date', 'Consumption']]
+
+        # Train the model and evaluate performance on test set
+        model.fit(train_df)
+        test_metrics = model.evaluate(train_df, test_df, save_dir=None)
+        for metric in test_metrics:
+            if metric in metrics_df.columns:
+                metrics_df[metric][cur_fold] = test_metrics[metric]
+        cur_fold += 1
+
+    # Record mean and standard deviation of test set results
+    for metric in metrics:
+        metrics_df[metric][n_folds] = metrics_df[metric][0:-2].mean()
+        metrics_df[metric][n_folds + 1] = metrics_df[metric][0:-2].std()
+
+    # Save results
+    if file_path is not None:
+        metrics_df.to_csv(file_path, columns=metrics_df.columns, index_label=False, index=False)
+    return metrics_df
+
+
+def bayesian_hparam_optimization(cfg):
+    '''
+    Conducts a Bayesian hyperparameter optimization, given the parameter ranges and selected model
+    :param cfg: Project config
+    :return: Dict of hyperparameters deemed optimal
+    '''
+
+    dataset = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
+    dataset['Date'] = pd.to_datetime(dataset['Date'])
+    dataset = dataset[50:-50]  # TODO: Update this!
+
+    model_name = cfg['TRAIN']['MODEL'].upper()
+    hparam_space = {}
+    for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
+        if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
+            hparam_space[hparam_name] = hp.choice(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'])
+        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'int_uniform':
+            hparam_space[hparam_name] = hp.quniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1], 1)
+        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_log':
+            hparam_space[hparam_name] = hp.loguniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_uniform':
+            hparam_space[hparam_name] = hp.uniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+
+    def objective(space):
+        scores = cross_validation(cfg, ['MAPE'], dataset, model_name=model_name, hparams=space)['MAPE']
+        score = scores[scores.shape[0] - 2]     # Get the mean
+        return {'loss': -score, 'status': STATUS_OK}   # We aim to maximize MAPE, therefore we return it as a negative value
+
+    trials = Trials()
+    best_hparams = fmin(fn=objective, space=hparam_space, max_evals=100, algo=tpe.suggest, trials=trials)
+    print(best_hparams)
+    return best_hparams
+
+
 def train_experiment(cfg=None, experiment='single_train', save_model=False, write_logs=False):
     '''
     Run a training experiment
@@ -140,6 +229,10 @@ def train_experiment(cfg=None, experiment='single_train', save_model=False, writ
         train_single(cfg, save_model=save_model)
     elif experiment == 'train_all':
         train_all(cfg, save_models=save_model)
+    elif experiment == 'hparam_search':
+        bayesian_hparam_optimization(cfg)
+    else:
+        raise Exception("Invalid entry in TRAIN > EXPERIMENT field of config.yml.")
     return
 
 

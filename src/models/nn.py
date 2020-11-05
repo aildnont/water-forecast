@@ -22,7 +22,7 @@ class NNModel(ModelStrategy):
         self.batch_size = hparams.get('BATCH_SIZE', 32)
         self.epochs = hparams.get('EPOCHS', 100)
         self.patience = hparams.get('PATIENCE', 15)
-        self.val_set_size = hparams.get('VAL_SET_SIZE', 30)
+        self.val_frac = hparams.get('VAL_FRAC', 0.1)
         self.T_x = hparams.get('T_X', 32)
         self.metrics = [MeanSquaredError(name='mse'), RootMeanSquaredError(name='rmse'), MeanAbsoluteError(name='mae'),
                         MeanAbsolutePercentageError(name='mape')]
@@ -49,8 +49,8 @@ class NNModel(ModelStrategy):
             df = df[['Date', 'Consumption']]
         df.loc[:, dataset.columns != 'Date'] = self.standard_scaler.fit_transform(dataset.loc[:, dataset.columns != 'Date'])
 
-        train_df = df[0:-self.val_set_size]
-        val_df = df[self.val_set_size:]
+        train_df = df[0:-int(df.shape[0]*self.val_frac)]
+        val_df = df[-int(df.shape[0]*self.val_frac):]
 
         # Make time series datasets
         train_dates, X_train, Y_train = self.make_windowed_dataset(train_df)
@@ -230,6 +230,8 @@ class CNN1DModel(NNModel):
         name = '1DCNN'
         self.filters = hparams.get('FILTERS', 128)
         self.kernel_size = hparams.get('KERNEL_SIZE', 3)
+        self.stride = hparams.get('STRIDE', 2)
+        self.n_conv_layers = hparams.get('N_CONV_LAYERS', 2)
         self.fc_units = hparams.get('FC_UNITS', [32])
         self.dropout = hparams.get('DROPOUT', 0.25)
         self.lr = hparams.get('LR', 1e-3)
@@ -238,7 +240,8 @@ class CNN1DModel(NNModel):
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim)
-        X = Conv1D(self.filters, self.kernel_size, activation='relu')(X_input)
+        for i in range(self.n_conv_layers):
+            X = Conv1D(self.filters, self.kernel_size, stride=self.stride, activation='relu')(X_input)
         X = Flatten()(X)
         for d in self.fc_units:
             X = Dense(d, activation='relu')(X)
