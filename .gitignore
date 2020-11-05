@@ -2,7 +2,8 @@ data/preprocessed/*
 data/raw/*
 data/raw_test/*
 data/serializations/*
-img/visualizations/*
+img/data_visualizations/*
+img/forecast_visualizations/*
 results/experiments/*
 results/logs/training/*
 results/logs/hparam_search/*
@@ -15,7 +16,8 @@ azure/.ipynb_checkpoints
 !data/serializations/.gitkeep
 !data/raw/.gitkeep
 !img/.gitkeep
-!img/visualizations/.gitkeep
+!img/data_visualizations/.gitkeep
+!img/forecast_visualizations/.gitkeep
 !results/logs/training/.gitkeep
 !results/logs/hparam_search/.gitkeep
 !results/models/.gitkeep

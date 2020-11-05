@@ -84,6 +84,6 @@ def plot_model_evaluation(forecast_df, model_name, metrics, figsize=(20,13), sav
           " | rmse:", np.round(metrics['RMSE']))
 
     if save_fig:
-        plt.savefig(cfg['PATHS']['VISUALIZATIONS'] + model_name + '_forecast_' +
+        plt.savefig(cfg['PATHS']['FORECAST_VISUALIZATIONS'] + model_name + '_forecast_' +
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return

@@ -1,5 +1,5 @@
 import pmdarima
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 import os
 from src.models.model import ModelStrategy
 
@@ -29,14 +29,15 @@ class ARIMAModel(ModelStrategy):
         dataset.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         series = dataset.set_index('ds')
         if self.auto_params:
-            best_model = pmdarima.auto_arima(series, seasonal=False, stationary=False, m=self.m, information_criterion='aic',
-                                             max_order=self.p + self.q, max_p=self.p, max_d=self.d,
-                                             max_q=self.q, error_action='ignore')     # Automatically determine model parameters
+            best_model = pmdarima.auto_arima(series, seasonal=False, stationary=False, information_criterion='aic',
+                                             max_order=2*(self.p + self.q), max_p=2*self.p, max_d=2*self.d,
+                                             max_q=2*self.q, error_action='ignore')
             order = best_model.order
             print("Best ARIMA params: (p, d, q):", best_model.order)
         else:
             order = (self.p, self.d, self.q)
-        self.model = ARIMA(series, order=order).fit(disp=1)
+        self.model = ARIMA(series, order=order).fit()
+        print(self.model.summary())
         return
 
 
