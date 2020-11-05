@@ -1,5 +1,5 @@
 import pmdarima
-import statsmodels.tsa.api as smt
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 import os
 from src.models.model import ModelStrategy
 
@@ -34,8 +34,8 @@ class SARIMAModel(ModelStrategy):
         series = dataset.set_index('ds')
         if self.auto_params:
             best_model = pmdarima.auto_arima(series, seasonal=True, stationary=False, m=self.m, information_criterion='aic',
-                                             max_order=self.p_max + self.q_max, max_p=self.p_max, max_d=self.d_max,
-                                             max_q=self.q_max, max_P=self.p_max, max_D=self.d_max, max_Q=self.q_max,
+                                             max_order=2*(self.p + self.q), max_p=2*self.p, max_d=2*self.d,
+                                             max_q=2*self.q, max_P=2*self.p, max_D=2*self.d, max_Q=2*self.q,
                                              error_action='ignore')     # Automatically determine model parameters
             order = best_model.order
             seasonal_order = best_model.seasonal_order
@@ -43,8 +43,9 @@ class SARIMAModel(ModelStrategy):
         else:
             order = (self.trend_p, self.trend_d, self.trend_q)
             seasonal_order = (self.seasonal_p, self.seasonal_d, self.seasonal_q, self.m)
-        self.model = smt.SARIMAX(series, order=order, seasonal_order=seasonal_order,
-                                 enforce_stationarity=False, enforce_invertibility=False).fit(disp=1)
+        self.model = SARIMAX(series, order=order, seasonal_order=seasonal_order,
+                                 enforce_stationarity=True, enforce_invertibility=True).fit()
+        print(self.model.summary())
         return
 
 

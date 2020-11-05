@@ -33,13 +33,18 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'lstm'
-  EXPERIMENT: 'train_all'
+  MODEL: 'arima'
+  EXPERIMENT: 'train_single'
 
 # Hyperparameters specific to individual models
 HPARAMS:
   PROPHET:
     COUNTRY: 'CA'
+    CHANGEPOINT_PRIOR_SCALE: 0.05
+    SEASONALITY_PRIOR_SCALE: 10
+    HOLIDAYS_PRIOR_SCALE: 10
+    SEASONALITY_MODE: 'additive'
+    CHANGEPOINT_RANGE: 0.95
     HOLIDAYS:
       Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
                     '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',
@@ -49,17 +54,17 @@ HPARAMS:
                         '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05']
   ARIMA:
     AUTO_PARAMS: false
-    P: 5
+    P: 7
     D: 1
-    Q: 7
+    Q: 30
   SARIMA:
     AUTO_PARAMS: false
-    TREND_P: 5
+    TREND_P: 7
     TREND_D: 1
-    TREND_Q: 7
+    TREND_Q: 0
     SEASONAL_P: 1
     SEASONAL_D: 1
-    SEASONAL_Q: 1
+    SEASONAL_Q: 0
     M: 365
   LSTM:
     UNIVARIATE: true

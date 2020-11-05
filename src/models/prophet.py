@@ -12,6 +12,11 @@ class ProphetModel(ModelStrategy):
     def __init__(self, hparams, log_dir=None):
         univariate = True
         name = 'Prophet'
+        self.changepoint_prior_scale = hparams.get('CHANGEPOINT_PRIOR_SCALE', 0.05)
+        self.seasonality_prior_scale = hparams.get('SEASONALITY_PRIOR_SCALE', 10)
+        self.holidays_prior_scale = hparams.get('HOLIDAYS_PRIOR_SCALE', 10)
+        self.seasonality_mode = hparams.get('SEASONALITY_MODE', 'additive')
+        self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.8)
 
         # Build DataFrame of local holidays
         holiday_dfs = []
@@ -21,9 +26,11 @@ class ProphetModel(ModelStrategy):
                 'ds': pd.to_datetime(hparams['HOLIDAYS'][holiday]),
                 'lower_window': 0,
                 'upper_window': 1}))
-        local_holidays = pd.concat(holiday_dfs)
+        self.local_holidays = pd.concat(holiday_dfs)
 
-        model = Prophet(yearly_seasonality=True, holidays=local_holidays)
+        model = Prophet(yearly_seasonality=True, holidays=self.local_holidays, changepoint_prior_scale=self.changepoint_prior_scale,
+                        seasonality_prior_scale=self.seasonality_prior_scale, holidays_prior_scale=self.holidays_prior_scale,
+                        seasonality_mode=self.seasonality_mode, changepoint_range=self.changepoint_range)
         model.add_country_holidays(country_name=hparams['COUNTRY'])   # Add country-wide holidays
         super(ProphetModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
