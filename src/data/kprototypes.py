@@ -136,8 +136,7 @@ def silhouette_analysis(k_min=2, k_max=20):
     optimal_k = k_range[np.argmax(silhouette_scores)]   # Optimal k is that which maximizes average Silhouette Score
 
     # Visualize the Silhouette Plot
-    visualize_silhouette_plot(k_range, silhouette_scores, optimal_k=optimal_k,
-                              file_path=cfg['PATHS']['IMAGES'] + 'silhouette_plot_')
+    visualize_silhouette_plot(k_range, silhouette_scores, optimal_k=optimal_k, save_fig=True)
     return optimal_k
 
 
