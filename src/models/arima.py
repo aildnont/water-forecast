@@ -41,11 +41,13 @@ class ARIMAModel(ModelStrategy):
         return
 
 
-    def evaluate(self, train_set, test_set, save_dir=None):
+    def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
         Evaluates performance of ARIMA model on test set
         :param train_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param test_set: A Pandas DataFrame with 2 columns: Date and Consumption
+        :param save_dir: Directory in which to save forecast metrics
+        :param plot: Flag indicating whether to plot the forecast evaluation
         '''
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
@@ -55,11 +57,19 @@ class ARIMAModel(ModelStrategy):
         test_set["forecast"] = self.model.predict(start=train_set.shape[0], end=train_set.shape[0] + test_set.shape[0] - 1)
 
         df_forecast = train_set.append(test_set).rename(columns={'y': 'gt'})
-        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir)
+        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
         return test_metrics
 
 
     def forecast(self, days, recent_data=None):
+        '''
+        Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
+        The model makes a prediction for the provided example, then uses the result for the next prediction.
+        Repeat this process for a specified number of days.
+        :param days: Number of days into the future to produce a forecast for
+        :param recent_data: A factual example for the first prediction
+        :return: An array of predictions
+        '''
         predictions = self.model.forecast(steps=days)
         return predictions
 

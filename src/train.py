@@ -70,7 +70,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         model.save_model(cfg['PATHS']['MODELS'])
 
     # Evaluate the model on the test set
-    test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENTS'])
+    test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENTS'], plot=True)
     return test_forecast_metrics
 
 
@@ -157,7 +157,7 @@ def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, file_
 
         # Train the model and evaluate performance on test set
         model.fit(train_df)
-        test_metrics = model.evaluate(train_df, test_df, save_dir=None)
+        test_metrics = model.evaluate(train_df, test_df, save_dir=None, plot=False)
         for metric in test_metrics:
             if metric in metrics_df.columns:
                 metrics_df[metric][cur_fold] = test_metrics[metric]
@@ -187,27 +187,54 @@ def bayesian_hparam_optimization(cfg):
 
     model_name = cfg['TRAIN']['MODEL'].upper()
     hparam_space = {}
+    objective_metric = cfg['TRAIN']['HPARAM_SEARCH']['HPARAM_OBJECTIVE']
+    results = {'Trial': [], objective_metric: []}
     for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
-        if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
-            hparam_space[hparam_name] = hp.choice(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'])
-        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'int_uniform':
-            hparam_space[hparam_name] = hp.quniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1], 1)
-        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_log':
-            hparam_space[hparam_name] = hp.loguniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
-        elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_uniform':
-            hparam_space[hparam_name] = hp.uniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                    cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+        if cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'] is not None:
+            if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
+                hparam_space[hparam_name] = hp.choice(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'])
+            elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'int_uniform':
+                hparam_space[hparam_name] = hp.quniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1], 1)
+            elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_log':
+                hparam_space[hparam_name] = hp.loguniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+            elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_uniform':
+                hparam_space[hparam_name] = hp.uniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+            results[hparam_name] = []
 
     def objective(space):
-        scores = cross_validation(cfg, ['MAPE'], dataset, model_name=model_name, hparams=space)['MAPE']
-        score = scores[scores.shape[0] - 2]     # Get the mean
-        return {'loss': -score, 'status': STATUS_OK}   # We aim to maximize MAPE, therefore we return it as a negative value
+        scores = cross_validation(cfg, [objective_metric], dataset, model_name=model_name, hparams=space)[objective_metric]
+        score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
+        return {'loss': score, 'status': STATUS_OK}   # We aim to minimize error
 
     trials = Trials()
-    best_hparams = fmin(fn=objective, space=hparam_space, max_evals=100, algo=tpe.suggest, trials=trials)
+    best_hparams = fmin(fn=objective, space=hparam_space, max_evals=cfg['TRAIN']['HPARAM_SEARCH']['MAX_EVALS'], algo=tpe.suggest, trials=trials)
     print(best_hparams)
+
+    # Create table to detail results
+    trial_idx = 0
+    for t in trials:
+        results['Trial'].append(str(trial_idx))
+        results[objective_metric].append(t['result']['loss'])
+        for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
+            if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
+                results[hparam_name].append(cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][t['misc']['vals'][hparam_name][0]])
+            else:
+                results[hparam_name].append(t['misc']['vals'][hparam_name][0])
+        trial_idx += 1
+    results['Trial'].append('Best')
+    results[objective_metric].append(trials.best_trial['result']['loss'])
+    for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
+        if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
+            results[hparam_name].append(cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][best_hparams[hparam_name]])
+        else:
+            results[hparam_name].append(best_hparams[hparam_name])
+    results_df = pd.DataFrame(results)
+    results_path = cfg['PATHS']['EXPERIMENTS'] + 'hparam_search_' + model_name + \
+                   datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + '.csv')
+    results_df.to_csv(results_path, index_label=False, index=False)
     return best_hparams
 
 

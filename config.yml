@@ -36,7 +36,9 @@ TRAIN:
   MODEL: 'prophet'
   EXPERIMENT: 'hparam_search'
   N_FOLDS: 5
-  NONTUNEABLES: ['AUTO_PARAMS', 'CHANGEPOINT_RANGE', 'VAL_FRAC']
+  HPARAM_SEARCH:
+    MAX_EVALS: 10
+    HPARAM_OBJECTIVE: 'MAPE'
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -79,7 +81,8 @@ HPARAMS:
     LOSS: 'mse'
     UNITS: 32
     DROPOUT: 0.25
-    FC_UNITS: [128]
+    FC0_UNITS: 32
+    FC1_UNITS: 16
   GRU:
     UNIVARIATE: true
     T_X: 365
@@ -91,7 +94,8 @@ HPARAMS:
     LOSS: 'mse'
     UNITS: 16
     DROPOUT: 0.25
-    FC_UNITS: [128]
+    FC0_UNITS: 32
+    FC1_UNITS: 16
   1DCNN:
     UNIVARIATE: true
     T_X: 365
@@ -105,7 +109,8 @@ HPARAMS:
     KERNEL_SIZE: 3
     STRIDE: 2
     N_CONV_LAYERS: 2
-    FC_UNITS: [16, 8]
+    FC0_UNITS: 32
+    FC1_UNITS: 16
     DROPOUT: 0.25
   LINEAR_REGRESSION:
     UNIVARIATE: true
@@ -152,7 +157,10 @@ HPARAM_SEARCH:
     DROPOUT:
       TYPE: 'float_uniform'
       RANGE: [0.0, 0.5]
-    FC_UNITS:
+    FC0_UNITS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64, 128]
+    FC1_UNITS:
       TYPE: 'set'
       RANGE: [8, 16, 32, 64]
   1DCNN:
@@ -186,7 +194,10 @@ HPARAM_SEARCH:
     DROPOUT:
       TYPE: 'float_uniform'
       RANGE: [0.0, 0.5]
-    FC_UNITS:
+    FC0_UNITS:
+      TYPE: 'set'
+      RANGE: [8, 16, 32, 64, 128]
+    FC1_UNITS:
       TYPE: 'set'
       RANGE: [8, 16, 32, 64]
 

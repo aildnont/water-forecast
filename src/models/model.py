@@ -28,7 +28,7 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def evaluate(self, train_set, test_set, save_dir=None):
+    def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
         Abstract method for model evaluation
         '''
@@ -51,7 +51,7 @@ class ModelStrategy(object):
         return None
 
 
-    def evaluate_forecast(self, forecast_df, plot=True, save_dir=None):
+    def evaluate_forecast(self, forecast_df, save_dir=None, plot=False):
         '''
         Given ground truth data and forecasts, assess the model's performance by computing using time series regression
         metrics. Optionally visualize the ground truth, residuals and forecasts.
