@@ -4,12 +4,14 @@ from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, GRU, Conv1D, Ma
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorflow.keras.metrics import MeanSquaredError, RootMeanSquaredError, MeanAbsoluteError, MeanAbsolutePercentageError
-from tensorflow.keras.models import save_model
+from tensorflow.keras.models import save_model, load_model
 from sklearn.preprocessing import StandardScaler
+from joblib import dump, load
 import pandas as pd
 import numpy as np
 import os
 from src.models.model import ModelStrategy
+import datetime
 
 class NNModel(ModelStrategy):
     '''
@@ -27,6 +29,7 @@ class NNModel(ModelStrategy):
         self.metrics = [MeanSquaredError(name='mse'), RootMeanSquaredError(name='rmse'), MeanAbsoluteError(name='mae'),
                         MeanAbsolutePercentageError(name='mape')]
         self.standard_scaler = StandardScaler()
+        self.forecast_start = datetime.datetime.today()
         model = None
         super(NNModel, self).__init__(model, self.univariate, name, log_dir=log_dir)
 
@@ -94,20 +97,19 @@ class NNModel(ModelStrategy):
         # Make predictions for training set and obtain forecast for test set
         train_preds = self.model.predict(X_train)
         test_preds = self.model.predict(X_test)
-        test_forecast = self.forecast(test_forecast_dates.shape[0], recent_data=X_train[-1])
+        test_forecast_df = self.forecast(test_forecast_dates.shape[0], recent_data=X_train[-1])
 
         # Rescale data
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.inverse_transform(train_set.loc[:, train_set.columns != 'Date'])
         test_set.loc[:, test_set.columns != 'Date'] = self.standard_scaler.inverse_transform(test_set.loc[:, test_set.columns != 'Date'])
         train_preds = self.standard_scaler.inverse_transform(train_preds)
         test_preds = self.standard_scaler.inverse_transform(test_preds)
-        test_forecast = self.standard_scaler.inverse_transform(test_forecast)
 
         # Create a DataFrame of combined training set predictions and test set forecast with ground truth
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
         df_test = pd.DataFrame({'ds': test_forecast_dates, 'gt': test_set['Consumption'],
-                                 'forecast': test_forecast[:,consumption_idx], 'test_pred': test_preds[:,consumption_idx]})
+                                 'forecast': test_forecast_df['Consumption'], 'test_pred': test_preds[:,consumption_idx]})
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast
@@ -132,10 +134,13 @@ class NNModel(ModelStrategy):
             preds[i] = self.model.predict(np.expand_dims(x, axis=0))
             x = np.roll(x, -1, axis=0)
             x[-1] = preds[i]    # Prediction becomes latest data point in the example
-        return preds
+        preds = self.standard_scaler.inverse_transform(preds)
+        forecast_dates = pd.date_range(self.forecast_start, periods=days).tolist()
+        forecast_df = pd.DataFrame({'Date': forecast_dates, 'Consumption': preds[:,0].tolist()})
+        return forecast_df
 
 
-    def save_model(self, save_dir):
+    def save(self, save_dir, scaler_dir=None):
         '''
         Saves the model to disk
         :param save_dir: Directory in which to save the model
@@ -143,6 +148,21 @@ class NNModel(ModelStrategy):
         if self.model:
             model_path = os.path.join(save_dir, self.name + self.train_date + '.h5')
             save_model(self.model, model_path)  # Save the model's weights
+            dump(self.standard_scaler, scaler_dir + 'standard_scaler.joblib')
+
+
+    def load(self, model_path, scaler_path=None):
+        '''
+        Loads the model from disk
+        :param model_path: Path to saved model
+        '''
+        if os.path.splitext(model_path)[1] != '.h5':
+            raise Exception('Model file path for ' + self.name + ' must have ".h5" extension.')
+        if scaler_path is None:
+            raise Exception('Missing a path to a serialized standard scaler.')
+        self.model = load_model(model_path, compile=False)
+        self.standard_scaler = load(scaler_path)
+        return
 
 
     def make_windowed_dataset(self, dataset):
@@ -152,14 +172,27 @@ class NNModel(ModelStrategy):
         :param dataset: Pandas DataFrame indexed by date
         :return: A windowed time series dataset of shape (# rows, T_x, # features)
         '''
-        dates = dataset['Date'][self.T_x:]
+        dates = dataset['Date'][self.T_x - 1:].tolist()
         unindexed_dataset = dataset.loc[:, dataset.columns != 'Date']
-        X = np.zeros((unindexed_dataset.shape[0] - self.T_x, self.T_x, unindexed_dataset.shape[1]))
+        X = np.zeros((unindexed_dataset.shape[0] - self.T_x + 1, self.T_x, unindexed_dataset.shape[1]))
         Y = unindexed_dataset[self.T_x:].to_numpy()
         for i in range(X.shape[0]):
             X[i] = unindexed_dataset[i:i+self.T_x].to_numpy()
         return dates, X, Y
 
+
+    def get_recent_data(self, dataset):
+        '''
+        Given a preprocessed dataset, get the most recent factual example
+        :param dataset: A DataFrame representing a preprocessed dataset
+        :return: Most recent factual example
+        '''
+        if self.univariate:
+            dataset = dataset[['Date', 'Consumption']]
+        dataset.loc[:, dataset.columns != 'Date'] = self.standard_scaler.transform(dataset.loc[:, dataset.columns != 'Date'])
+        test_pred_dates, X, Y = self.make_windowed_dataset(dataset[-self.T_x:])
+        self.forecast_start = test_pred_dates[-1]
+        return X[-1]
 
 
 class LSTMModel(NNModel):

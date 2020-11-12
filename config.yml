@@ -21,6 +21,7 @@ PATHS:
   K-PROTOTYPES_CENTROIDS: 'results/experiments/cluster_centroids_'
   K-PROTOTYPES_CLUSTERS: 'results/experiments/client_clusters_'
   IMAGES: './img/visualizations/'
+  SERIALIZATIONS: './data/serializations/'
 
 # Constants describing data
 DATA:
@@ -33,8 +34,13 @@ DATA:
 
 # Training experiments
 TRAIN:
-  MODEL: 'arima'
+  MODEL: 'prophet'
   EXPERIMENT: 'train_single'
+
+# Forecasting
+FORECAST:
+  MODEL: 'prophet'
+  MODEL_PATH: 'C:/Users/Blake/Documents/Work/Projects/h2o-forecast/results/models/Prophet.pkl'
 
 # Hyperparameters specific to individual models
 HPARAMS:

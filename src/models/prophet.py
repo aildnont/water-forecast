@@ -1,5 +1,5 @@
 from fbprophet import Prophet
-from dill import dump
+from dill import dump, load
 import pandas as pd
 import os
 from src.models.model import ModelStrategy
@@ -68,10 +68,12 @@ class ProphetModel(ModelStrategy):
 
     def forecast(self, days, recent_data=None):
         future_dates = self.model.make_future_dataframe(periods=days)
-        return self.model.predict(future_dates)
+        forecast_df = self.model.predict(future_dates)[['ds', 'yhat']]
+        forecast_df.rename(columns={'ds': 'Date', 'yhat': 'Consumption'}, inplace=True)
+        return forecast_df
 
 
-    def save_model(self, save_dir):
+    def save(self, save_dir, scaler_dir=None):
         '''
         Saves the model to disk
         :param save_dir: Directory in which to save the model
@@ -79,6 +81,18 @@ class ProphetModel(ModelStrategy):
         if self.model:
             model_path = os.path.join(save_dir, self.name + self.train_date + '.pkl')
             dump(self.model, open(model_path, 'wb'))  # Serialize and save the model object
+
+
+    def load(self, model_path, scaler_path=None):
+        '''
+        Loads the model from disk
+        :param model_path: Path to saved model
+        '''
+        if os.path.splitext(model_path)[1] != '.pkl':
+            raise Exception('Model file path for ' + self.name + ' must have ".pkl" extension.')
+        self.model = load(open(model_path, 'rb'))
+        return
+
 
 
 
