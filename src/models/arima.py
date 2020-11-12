@@ -1,5 +1,5 @@
 import pmdarima
-from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA, ARIMAResults
 import os
 from src.models.model import ModelStrategy
 
@@ -52,7 +52,7 @@ class ARIMAModel(ModelStrategy):
         train_set = train_set.set_index('ds')
         test_set = test_set.set_index('ds')
         train_set["model"] = self.model.fittedvalues
-        test_set["forecast"] = self.model.predict(start=train_set.shape[0], end=train_set.shape[0] + test_set.shape[0] - 1)
+        test_set["forecast"] = self.forecast(test_set.shape[0])['Consumption'].tolist()
 
         df_forecast = train_set.append(test_set).rename(columns={'y': 'gt'})
         test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir)
@@ -60,11 +60,12 @@ class ARIMAModel(ModelStrategy):
 
 
     def forecast(self, days, recent_data=None):
-        predictions = self.model.forecast(steps=days)
-        return predictions
+        forecast_df = self.model.forecast(steps=days).reset_index(level=0)
+        forecast_df.columns = ['Date', 'Consumption']
+        return forecast_df
 
 
-    def save_model(self, save_dir):
+    def save(self, save_dir, scaler_dir=None):
         '''
         Saves the model to disk
         :param save_dir: Directory in which to save the model
@@ -72,3 +73,14 @@ class ARIMAModel(ModelStrategy):
         if self.model:
             model_path = os.path.join(save_dir, self.name + self.train_date + '.pkl')
             self.model.save(model_path)  # Serialize and save the model object
+
+
+    def load(self, model_path, scaler_path=None):
+        '''
+        Loads the model from disk
+        :param model_path: Path to saved model
+        '''
+        if os.path.splitext(model_path)[1] != '.pkl':
+            raise Exception('Model file path for ' + self.name + ' must have ".pkl" extension.')
+        self.model = ARIMAResults.load(model_path)
+        return

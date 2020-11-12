@@ -65,7 +65,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         test_df = test_df[['Date', 'Consumption']]
     model.fit(train_df)
     if save_model:
-        model.save_model(cfg['PATHS']['MODELS'])
+        model.save(cfg['PATHS']['MODELS'], scaler_dir=cfg['PATHS']['SERIALIZATIONS'])
 
     # Evaluate the model on the test set
     test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENTS'])
