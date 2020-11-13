@@ -1,6 +1,7 @@
 # Relevant file/directory paths
 PATHS:
-  RAW_DATA: 'data/raw/'
+  RAW_DATA_DIR: 'data/raw/'
+  RAW_DATASET: 'data/raw/raw_data.csv'
   CONSUMPTION_DATA: 'data/preprocessed/consumption_data.csv'
   PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
   INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
