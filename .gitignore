@@ -1,6 +1,7 @@
 data/preprocessed/*
 data/raw/*
 data/raw_test/*
+data/raw/quarterly/*
 data/serializations/*
 img/data_visualizations/*
 img/forecast_visualizations/*
@@ -16,6 +17,7 @@ azure/.ipynb_checkpoints
 !data/preprocessed/.gitkeep
 !data/serializations/.gitkeep
 !data/raw/.gitkeep
+!data/raw/quarterly/.gitkeep
 !img/.gitkeep
 !img/data_visualizations/.gitkeep
 !img/forecast_visualizations/.gitkeep

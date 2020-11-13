@@ -15,7 +15,7 @@ def load_raw_data(cfg, save_int_df=False):
     cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
     num_feats = cfg['DATA']['NUMERICAL_FEATS']
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
-    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA'] + "/*.csv")
+    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*/*.csv")
     raw_cons_dfs = []
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
