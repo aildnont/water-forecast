@@ -36,7 +36,7 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def forecast(self, days, recent_data=None):
+    def forecast(self, days, recent_data=None, start_date=None):
         '''
         Abstract method for forecasting with the model
         '''
@@ -44,11 +44,18 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def save_model(self, save_dir):
+    def save(self, save_dir, scaler_dir=None):
         '''
         Abstract method for serializing the model
         '''
         return None
+
+    @abstractmethod
+    def load(self, model_path, scaler_path=None):
+        '''
+        Abstract method for restoring the model from persistent storage
+        '''
+        return
 
 
     def evaluate_forecast(self, forecast_df, save_dir=None, plot=False):

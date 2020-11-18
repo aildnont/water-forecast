@@ -2,10 +2,11 @@ from abc import ABCMeta, abstractmethod
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-from joblib import dump
+from joblib import dump, load
 import pandas as pd
 import numpy as np
 import os
+import datetime
 from src.models.model import ModelStrategy
 
 class SKLearnModel(ModelStrategy):
@@ -18,6 +19,7 @@ class SKLearnModel(ModelStrategy):
         self.univariate = hparams.get('UNIVARIATE', False)
         self.T_x = int(hparams.get('T_X', 32))
         self.standard_scaler = StandardScaler()
+        self.forecast_start = datetime.datetime.today()
         model = None
         super(SKLearnModel, self).__init__(model, self.univariate, name, log_dir=log_dir)
 
@@ -75,20 +77,19 @@ class SKLearnModel(ModelStrategy):
         if len(train_preds.shape) < 2:
             train_preds = np.expand_dims(train_preds, axis=1)
             test_preds = np.expand_dims(test_preds, axis=1)
-        test_forecast = self.forecast(test_dates.shape[0], recent_data=X_train[-1])
+        test_forecast_df = self.forecast(test_dates.shape[0], recent_data=X_train[-1])
 
         # Rescale data
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.inverse_transform(train_set.loc[:, train_set.columns != 'Date'])
         test_set.loc[:, test_set.columns != 'Date'] = self.standard_scaler.inverse_transform(test_set.loc[:, test_set.columns != 'Date'])
         train_preds = self.standard_scaler.inverse_transform(train_preds)
         test_preds = self.standard_scaler.inverse_transform(test_preds)
-        test_forecast = self.standard_scaler.inverse_transform(test_forecast)
 
         # Create a DataFrame of combined training set predictions and test set forecast with ground truth
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
         df_test = pd.DataFrame({'ds': test_dates, 'gt': test_set['Consumption'],
-                                 'forecast': test_forecast[:,consumption_idx], 'test_pred': test_preds[:,consumption_idx]})
+                                 'forecast': test_forecast_df['Consumption'], 'test_pred': test_preds[:,consumption_idx]})
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast
@@ -116,10 +117,13 @@ class SKLearnModel(ModelStrategy):
             x = np.roll(x, -self.n_pred_feats)
             preds[i] = y
             x[-self.n_pred_feats:] = y   # Prediction becomes latest data in the example
-        return preds
+        preds = self.standard_scaler.inverse_transform(preds)
+        forecast_dates = pd.date_range(self.forecast_start, periods=days).tolist()
+        forecast_df = pd.DataFrame({'Date': forecast_dates, 'Consumption': preds[:,0].tolist()})
+        return forecast_df
 
 
-    def save_model(self, save_dir):
+    def save(self, save_dir, scaler_dir=None):
         '''
         Saves the model to disk
         :param save_dir: Directory in which to save the model
@@ -127,6 +131,21 @@ class SKLearnModel(ModelStrategy):
         if self.model:
             model_path = os.path.join(save_dir, self.name + self.train_date + '.joblib')
             dump(self.model, model_path)  # Serialize and save the model object
+            dump(self.standard_scaler, scaler_dir + 'standard_scaler.joblib')
+
+
+    def load(self, model_path, scaler_path=None):
+        '''
+        Loads the model from disk
+        :param model_path: Path to saved model
+        '''
+        if os.path.splitext(model_path)[1] != '.joblib':
+            raise Exception('Model file path for ' + self.name + ' must have ".joblib" extension.')
+        if scaler_path is None:
+            raise Exception('Missing a path to a serialized standard scaler.')
+        self.model = load(model_path)
+        self.standard_scaler = load(scaler_path)
+        return
 
 
     def make_windowed_dataset(self, dataset):
@@ -136,7 +155,7 @@ class SKLearnModel(ModelStrategy):
         :param dataset: Pandas DataFrame indexed by date
         :return: A windowed time series dataset of shape (# rows, T_x, # features)
         '''
-        dates = dataset['Date'][self.T_x:]
+        dates = dataset['Date'][self.T_x - 1:].tolist()
         unindexed_dataset = dataset.loc[:, dataset.columns != 'Date']
         X = np.zeros((unindexed_dataset.shape[0] - self.T_x, self.T_x, unindexed_dataset.shape[1]))
         Y = unindexed_dataset[self.T_x:].to_numpy()
@@ -144,6 +163,20 @@ class SKLearnModel(ModelStrategy):
             X[i] = unindexed_dataset[i:i+self.T_x].to_numpy()
         X = X.reshape((X.shape[0], X.shape[1] * X.shape[2]))
         return dates, X, Y
+
+
+    def get_recent_data(self, dataset):
+        '''
+        Given a preprocessed dataset, get the most recent factual example
+        :param dataset: A DataFrame representing a preprocessed dataset
+        :return: Most recent factual example
+        '''
+        if self.univariate:
+            dataset = dataset[['Date', 'Consumption']]
+        dataset.loc[:, dataset.columns != 'Date'] = self.standard_scaler.transform(dataset.loc[:, dataset.columns != 'Date'])
+        test_pred_dates, X, Y = self.make_windowed_dataset(pd.concat([dataset[-self.T_x:], dataset]))
+        self.forecast_start = test_pred_dates[-1]
+        return X[-1]
 
 
 
