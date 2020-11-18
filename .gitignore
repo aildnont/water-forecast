@@ -4,6 +4,7 @@ data/raw_test/*
 data/serializations/*
 img/data_visualizations/*
 img/forecast_visualizations/*
+img/experiment_visualizations/*
 results/experiments/*
 results/logs/training/*
 results/logs/hparam_search/*
@@ -18,6 +19,7 @@ azure/.ipynb_checkpoints
 !img/.gitkeep
 !img/data_visualizations/.gitkeep
 !img/forecast_visualizations/.gitkeep
+!img/experiment_visualizations/.gitkeep
 !results/logs/training/.gitkeep
 !results/logs/hparam_search/.gitkeep
 !results/models/.gitkeep

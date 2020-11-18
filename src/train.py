@@ -3,13 +3,15 @@ import yaml
 import os
 import datetime
 from sklearn.model_selection import TimeSeriesSplit
-from hyperopt import hp, fmin, tpe, STATUS_OK, Trials
+from skopt import gp_minimize
+from skopt.space import Real, Categorical, Integer
 from src.models.prophet import ProphetModel
 from src.models.arima import ARIMAModel
 from src.models.sarima import SARIMAModel
 from src.models.nn import *
 from src.models.skmodels import *
 from src.data.preprocess import preprocess_ts
+from src.visualization.visualize import plot_bayesian_hparam_opt
 
 # Map model names to their respective class definitions
 MODELS_DEFS = {
@@ -36,7 +38,7 @@ def load_dataset(cfg):
         print("No file found at " + cfg['PATHS']['PREPROCESSED_DATA'] + ". Running preprocessing of client data.")
         df = preprocess_ts(cfg, save_df=False)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df[50:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
+    df = df[274:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
 
     # Define training and test sets
     train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
@@ -46,7 +48,7 @@ def load_dataset(cfg):
     return train_df, test_df
 
 
-def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, write_logs=False):
+def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, write_logs=False, save_metrics=False):
     '''
     Train a model
     :param cfg: Project config
@@ -56,6 +58,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
     :param test_df: Test set as DataFrame
     :param save_model: Flag indicating whether to save the model
     :param write_logs: Flag indicating whether to write any training logs to disk
+    :param save_metrics: Flag indicating whether to save the forecast metrics to a CSV
     :return: Dictionary of test set forecast metrics
     '''
     log_dir = cfg['PATHS']['LOGS'] if write_logs else None
@@ -70,26 +73,30 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         model.save_model(cfg['PATHS']['MODELS'])
 
     # Evaluate the model on the test set
-    test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENTS'], plot=True)
+    save_dir = cfg['PATHS']['EXPERIMENTS'] if save_metrics else None
+    test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=save_dir, plot=save_metrics)
     return test_forecast_metrics
 
 
 
-def train_single(cfg, save_model=False, write_logs=False):
+def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_metrics=False):
     '''
-    Train a single model
+    Train a single model. Use the passed hyperparameters if possible; otherwise, use those in config.
     :param cfg: Project config
+    :param hparams: Dict of hyperparameters
     :param save_model: Flag indicating whether to save the model
     :param write_logs: Flag indicating whether to write any training logs to disk
+    :param save_metrics: Flag indicating whether to save the forecast metrics to a CSV
     :return: Dictionary of test set forecast metrics
     '''
     train_df, test_df = load_dataset(cfg)
     model_def = MODELS_DEFS.get(cfg['TRAIN']['MODEL'].upper(), lambda: "Invalid model specified in cfg['TRAIN']['MODEL']")
-    hparams = cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()]
+    if hparams is None:
+        hparams = cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()]
     test_forecast_metrics = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_model,
-                                        write_logs=write_logs)
+                                        write_logs=write_logs, save_metrics=save_metrics)
     print('Test forecast metrics: ', test_forecast_metrics)
-    return
+    return test_forecast_metrics
 
 
 def train_all(cfg, save_models=False, write_logs=False):
@@ -124,19 +131,23 @@ def train_all(cfg, save_models=False, write_logs=False):
     return metrics_df
 
 
-def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, file_path=None):
+def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, last_folds=None, file_path=None):
     '''
     Perform a nested cross-validation with day-forward chaining. Results are saved in CSV format.
     :param cfg: project config
     :param dataset: A DataFrame consisting of the entire dataset
-    :param n_folds: Number of folds for cross validation
-    :param metrics: List of metrics to keep track of
+    :param model_name: String identifying model
+    :param last_folds: Limit cross validation to the most recent last_folds folds
+    :param file_path: Path to save results as CSV
     :return DataFrame of metrics
     '''
 
     n_folds = cfg['TRAIN']['N_FOLDS']
-    metrics_df = pd.DataFrame(np.zeros((n_folds + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
-    metrics_df['Fold'] = list(range(1, n_folds + 1)) + ['mean', 'std']
+    if last_folds is None:
+        last_folds = n_folds
+    n_rows = n_folds if last_folds is None else last_folds
+    metrics_df = pd.DataFrame(np.zeros((n_rows + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
+    metrics_df['Fold'] = list(range(n_folds - last_folds + 1, n_folds + 1)) + ['mean', 'std']
     ts_cv = TimeSeriesSplit(n_splits=n_folds)
     model_name = cfg['TRAIN']['MODEL'].upper() if model_name is None else model_name
     hparams = cfg['HPARAMS'][model_name] if hparams is None else hparams
@@ -145,28 +156,36 @@ def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, file_
 
     # Train a model n_folds times with different folds
     cur_fold = 0
+    row_idx = 0
     for train_index, test_index in ts_cv.split(dataset):
-        model = model_def(hparams)
-        model.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        if cur_fold >= n_folds - last_folds:
+            print('Fitting model for fold ' + str(cur_fold))
+            model = model_def(hparams)
+            model.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 
-        # Separate into training and test sets
-        train_df, test_df = dataset.iloc[train_index], dataset.iloc[test_index]
-        if model.univariate:
-            train_df = train_df[['Date', 'Consumption']]
-            test_df = test_df[['Date', 'Consumption']]
+            # Separate into training and test sets
+            train_df, test_df = dataset.iloc[train_index], dataset.iloc[test_index]
+            if model.univariate:
+                train_df = train_df[['Date', 'Consumption']]
+                test_df = test_df[['Date', 'Consumption']]
 
-        # Train the model and evaluate performance on test set
-        model.fit(train_df)
-        test_metrics = model.evaluate(train_df, test_df, save_dir=None, plot=False)
-        for metric in test_metrics:
-            if metric in metrics_df.columns:
-                metrics_df[metric][cur_fold] = test_metrics[metric]
+            if model_name in ['LSTM', 'GRU', '1DCNN']:
+                if model.val_frac*train_df.shape[0] < model.T_x:
+                    continue    # Validation set can't be larger than input sequence length
+
+            # Train the model and evaluate performance on test set
+            model.fit(train_df)
+            test_metrics = model.evaluate(train_df, test_df, save_dir=None, plot=False)
+            for metric in test_metrics:
+                if metric in metrics_df.columns:
+                    metrics_df[metric][row_idx] = test_metrics[metric]
+            row_idx += 1
         cur_fold += 1
 
     # Record mean and standard deviation of test set results
     for metric in metrics:
-        metrics_df[metric][n_folds] = metrics_df[metric][0:-2].mean()
-        metrics_df[metric][n_folds + 1] = metrics_df[metric][0:-2].std()
+        metrics_df[metric][last_folds] = metrics_df[metric][0:-2].mean()
+        metrics_df[metric][last_folds + 1] = metrics_df[metric][0:-2].std()
 
     # Save results
     if file_path is not None:
@@ -185,57 +204,66 @@ def bayesian_hparam_optimization(cfg):
     dataset['Date'] = pd.to_datetime(dataset['Date'])
     dataset = dataset[50:-50]  # TODO: Update this!
 
-    model_name = cfg['TRAIN']['MODEL'].upper()
-    hparam_space = {}
+    model_name = cfg['TRAIN']['MOfDEL'].upper()
     objective_metric = cfg['TRAIN']['HPARAM_SEARCH']['HPARAM_OBJECTIVE']
     results = {'Trial': [], objective_metric: []}
+    dimensions = []
+    default_params = []
+    hparam_names = []
     for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
         if cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'] is not None:
             if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
-                hparam_space[hparam_name] = hp.choice(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'])
+                dimensions.append(Categorical(categories=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'],
+                                              name=hparam_name))
             elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'int_uniform':
-                hparam_space[hparam_name] = hp.quniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1], 1)
+                dimensions.append(Integer(low=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                          high=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1],
+                                          prior='uniform', name=hparam_name))
             elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_log':
-                hparam_space[hparam_name] = hp.loguniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+                dimensions.append(Real(low=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                       high=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1],
+                                       prior='log-uniform', name=hparam_name))
             elif cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'float_uniform':
-                hparam_space[hparam_name] = hp.uniform(hparam_name, cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
-                                                        cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1])
+                dimensions.append(Real(low=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][0],
+                                       high=cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][1],
+                                       prior='uniform', name=hparam_name))
+            default_params.append(cfg['HPARAMS'][model_name][hparam_name])
+            hparam_names.append(hparam_name)
             results[hparam_name] = []
 
-    def objective(space):
-        scores = cross_validation(cfg, [objective_metric], dataset, model_name=model_name, hparams=space)[objective_metric]
-        score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
-        return {'loss': score, 'status': STATUS_OK}   # We aim to minimize error
-
-    trials = Trials()
-    best_hparams = fmin(fn=objective, space=hparam_space, max_evals=cfg['TRAIN']['HPARAM_SEARCH']['MAX_EVALS'], algo=tpe.suggest, trials=trials)
-    print(best_hparams)
+    def objective(vals):
+        hparams = dict(zip(hparam_names, vals))
+        print('HPARAM VALUES: ', hparams)
+        #scores = cross_validation(cfg, [objective_metric], dataset, model_name=model_name, hparams=hparam_dict,
+        #                          last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
+        #score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
+        test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
+        score = test_metrics['MAPE']
+        return score   # We aim to minimize error
+    search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',
+                                 n_calls=cfg['TRAIN']['HPARAM_SEARCH']['MAX_EVALS'], verbose=True)
+    print(search_results)
+    plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=True)
 
     # Create table to detail results
     trial_idx = 0
-    for t in trials:
+    for t in search_results.x_iters:
         results['Trial'].append(str(trial_idx))
-        results[objective_metric].append(t['result']['loss'])
-        for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
-            if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
-                results[hparam_name].append(cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][t['misc']['vals'][hparam_name][0]])
-            else:
-                results[hparam_name].append(t['misc']['vals'][hparam_name][0])
+        results[objective_metric].append(search_results.func_vals[trial_idx])
+        for i in range(len(hparam_names)):
+            results[hparam_names[i]].append(t[i])
         trial_idx += 1
     results['Trial'].append('Best')
-    results[objective_metric].append(trials.best_trial['result']['loss'])
-    for hparam_name in cfg['HPARAM_SEARCH'][model_name]:
-        if cfg['HPARAM_SEARCH'][model_name][hparam_name]['TYPE'] == 'set':
-            results[hparam_name].append(cfg['HPARAM_SEARCH'][model_name][hparam_name]['RANGE'][best_hparams[hparam_name]])
-        else:
-            results[hparam_name].append(best_hparams[hparam_name])
+    results[objective_metric].append(search_results.fun)
+    for i in range(len(hparam_names)):
+        results[hparam_names[i]].append(search_results.x[i])
     results_df = pd.DataFrame(results)
     results_path = cfg['PATHS']['EXPERIMENTS'] + 'hparam_search_' + model_name + \
                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + '.csv')
     results_df.to_csv(results_path, index_label=False, index=False)
-    return best_hparams
+
+
+    return search_results
 
 
 def train_experiment(cfg=None, experiment='single_train', save_model=False, write_logs=False):
@@ -253,7 +281,7 @@ def train_experiment(cfg=None, experiment='single_train', save_model=False, writ
 
     # Conduct the desired train experiment
     if experiment == 'train_single':
-        train_single(cfg, save_model=save_model)
+        train_single(cfg, save_model=save_model, save_metrics=True)
     elif experiment == 'train_all':
         train_all(cfg, save_models=save_model)
     elif experiment == 'hparam_search':

@@ -15,7 +15,8 @@ def load_raw_data(cfg, save_int_df=False):
     cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
     num_feats = cfg['DATA']['NUMERICAL_FEATS']
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
-    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA'] + "/*.csv")
+    feat_names = ['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats
+    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA'] + "/*/*.csv")
     raw_cons_dfs = []
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
@@ -23,12 +24,20 @@ def load_raw_data(cfg, save_int_df=False):
         for f in df.columns:
             if ' 'in f or '"' in f:
                 df.rename(columns={f: f.replace(' ', '').replace('"', '')}, inplace=True)
-        df = df[['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats]
+        for f in feat_names:
+            if f not in df.columns:
+                if f in cat_feats:
+                    df[f] = 'Unknown'
+                else:
+                    df[f] = 0
+        df = df[feat_names]
         raw_cons_dfs.append(df) # Add to list of DFs
     raw_df = pd.concat(raw_cons_dfs, axis=0, ignore_index=True)     # Concatenate all water demand data
+    print(raw_df.shape)
 
     print('Dropping duplicate rows.')
     raw_df = raw_df.drop_duplicates()   # Drop duplicate entries appearing in different data slices
+    print(raw_df.shape)
     raw_df['EFFECTIVE_DATE'] = pd.to_datetime(raw_df['EFFECTIVE_DATE'], errors='coerce')
     raw_df['END_DATE'] = pd.to_datetime(raw_df['END_DATE'], errors='coerce')
 

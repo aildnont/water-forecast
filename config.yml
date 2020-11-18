@@ -10,6 +10,7 @@ PATHS:
   MODEL_TO_LOAD: 'results/models/model.h5'
   DATA_VISUALIZATIONS: 'img/data_visualizations/'
   FORECAST_VISUALIZATIONS: 'img/forecast_visualizations/'
+  EXPERIMENT_VISUALIZATIONS: 'img/experiment_visualizations/'
   LOGS: 'results\\logs\\'
   EXPERIMENTS: 'results/experiments/'
   TRAIN_SET: 'data/preprocessed/Train_Set.csv'
@@ -34,20 +35,21 @@ DATA:
 # Training experiments
 TRAIN:
   MODEL: 'prophet'
-  EXPERIMENT: 'hparam_search'
-  N_FOLDS: 5
+  EXPERIMENT: 'train_single'
+  N_FOLDS: 6
   HPARAM_SEARCH:
-    MAX_EVALS: 10
+    MAX_EVALS: 500
     HPARAM_OBJECTIVE: 'MAPE'
+    LAST_FOLDS: 4
 
 # Hyperparameters specific to individual models
 HPARAMS:
   PROPHET:
     COUNTRY: 'CA'
-    CHANGEPOINT_PRIOR_SCALE: 0.05
-    SEASONALITY_PRIOR_SCALE: 10
-    HOLIDAYS_PRIOR_SCALE: 10
-    SEASONALITY_MODE: 'additive'
+    CHANGEPOINT_PRIOR_SCALE: 0.052
+    SEASONALITY_PRIOR_SCALE: 9.94
+    HOLIDAYS_PRIOR_SCALE: 0.104
+    SEASONALITY_MODE: 'multiplicative'
     CHANGEPOINT_RANGE: 0.95
     HOLIDAYS:
       Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
@@ -72,22 +74,22 @@ HPARAMS:
     M: 365
   LSTM:
     UNIVARIATE: true
-    T_X: 365
+    T_X: 248
     BATCH_SIZE: 32
-    EPOCHS: 300
-    PATIENCE: 10
+    EPOCHS: 500
+    PATIENCE: 7
     VAL_FRAC: 0.1
-    LR: 0.001
-    LOSS: 'mse'
-    UNITS: 32
-    DROPOUT: 0.25
+    LR: 0.000718
+    LOSS: 'huber_loss'
+    UNITS: 128
+    DROPOUT: 0.0017
     FC0_UNITS: 32
-    FC1_UNITS: 16
+    FC1_UNITS: 64
   GRU:
     UNIVARIATE: true
     T_X: 365
     BATCH_SIZE: 32
-    EPOCHS: 300
+    EPOCHS: 500
     PATIENCE: 10
     VAL_FRAC: 0.1
     LR: 0.001
@@ -98,20 +100,20 @@ HPARAMS:
     FC1_UNITS: 16
   1DCNN:
     UNIVARIATE: true
-    T_X: 365
-    BATCH_SIZE: 32
+    T_X: 53
+    BATCH_SIZE: 64
     EPOCHS: 300
-    PATIENCE: 10
+    PATIENCE: 11
     VAL_FRAC: 0.1
-    LR: 0.001
-    LOSS: 'mse'
-    FILTERS: 16
+    LR: 0.00001
+    LOSS: 'mae'
+    FILTERS: 8
     KERNEL_SIZE: 3
     STRIDE: 2
-    N_CONV_LAYERS: 2
-    FC0_UNITS: 32
-    FC1_UNITS: 16
-    DROPOUT: 0.25
+    N_CONV_LAYERS: 1
+    FC0_UNITS: 64
+    FC1_UNITS: 8
+    DROPOUT: 0.0
   LINEAR_REGRESSION:
     UNIVARIATE: true
     T_X: 365
@@ -125,13 +127,13 @@ HPARAM_SEARCH:
   PROPHET:
     CHANGEPOINT_PRIOR_SCALE:
       TYPE: 'float_log'
-      RANGE: [-6.908, -0.693]   # ln([0.001, 0.05])
+      RANGE: [0.001, 0.5]
     SEASONALITY_PRIOR_SCALE:
       TYPE: 'float_log'
-      RANGE: [-4.605, 2.303]    # ln([0.01, 10])
+      RANGE: [0.01, 10]
     HOLIDAYS_PRIOR_SCALE:
       TYPE: 'float_log'
-      RANGE: [-4.605, 2.303]    # ln([0.01, 10])
+      RANGE: [0.01, 10]
     SEASONALITY_MODE:
       TYPE: 'set'
       RANGE: ['additive', 'multiplicative']
@@ -141,13 +143,13 @@ HPARAM_SEARCH:
       RANGE: [30, 365]
     BATCH_SIZE:
       TYPE: 'set'
-      RANGE: [16, 32, 64]
+      RANGE: [16, 32]
     PATIENCE:
       TYPE: 'int_uniform'
       RANGE: [5, 15]
     LR:
       TYPE: 'float_log'
-      RANGE: [-11.513, -4.605]    # ln([1e-5, 1e-2])
+      RANGE: [0.00001, 0.001]
     LOSS:
       TYPE: 'set'
       RANGE: ['mse', 'mae', 'huber_loss']
@@ -159,14 +161,17 @@ HPARAM_SEARCH:
       RANGE: [0.0, 0.5]
     FC0_UNITS:
       TYPE: 'set'
-      RANGE: [8, 16, 32, 64, 128]
+      RANGE: [32, 64, 128]
     FC1_UNITS:
       TYPE: 'set'
-      RANGE: [8, 16, 32, 64]
+      RANGE: [16, 32, 64]
+    #FC2_UNITS:
+    #  TYPE: 'set'
+    #  RANGE: [8, 16, 32, 64]
   1DCNN:
     T_X:
       TYPE: 'int_uniform'
-      RANGE: [30, 365]
+      RANGE: [30, 60]
     BATCH_SIZE:
       TYPE: 'set'
       RANGE: [16, 32, 64]
@@ -175,7 +180,7 @@ HPARAM_SEARCH:
       RANGE: [5, 15]
     LR:
       TYPE: 'float_log'
-      RANGE: [-11.513, -4.605]   # ln([1e-5, 1e-2])
+      RANGE: [0.00001, 0.001]
     LOSS:
       TYPE: 'set'
       RANGE: ['mse', 'mae', 'huber_loss']
@@ -196,8 +201,11 @@ HPARAM_SEARCH:
       RANGE: [0.0, 0.5]
     FC0_UNITS:
       TYPE: 'set'
-      RANGE: [8, 16, 32, 64, 128]
+      RANGE: [32, 64, 128, 256]
     FC1_UNITS:
+      TYPE: 'set'
+      RANGE: [16, 32, 64, 128]
+    FC2_UNITS:
       TYPE: 'set'
       RANGE: [8, 16, 32, 64]
 

@@ -18,12 +18,12 @@ class NNModel(ModelStrategy):
     __metaclass__ = ABCMeta
 
     def __init__(self, hparams, name, log_dir):
-        self.univariate = hparams.get('UNIVARIATE', False)
-        self.batch_size = hparams.get('BATCH_SIZE', 32)
-        self.epochs = hparams.get('EPOCHS', 100)
-        self.patience = hparams.get('PATIENCE', 15)
-        self.val_frac = hparams.get('VAL_FRAC', 0.1)
-        self.T_x = hparams.get('T_X', 32)
+        self.univariate = hparams.get('UNIVARIATE', True)
+        self.batch_size = int(hparams.get('BATCH_SIZE', 32))
+        self.epochs = int(hparams.get('EPOCHS', 500))
+        self.patience = int(hparams.get('PATIENCE', 15))
+        self.val_frac = hparams.get('VAL_FRAC', 0.15)
+        self.T_x = int(hparams.get('T_X', 32))
         self.metrics = [MeanSquaredError(name='mse'), RootMeanSquaredError(name='rmse'), MeanAbsoluteError(name='mae'),
                         MeanAbsolutePercentageError(name='mape')]
         self.standard_scaler = StandardScaler()
@@ -54,7 +54,7 @@ class NNModel(ModelStrategy):
 
         # Make time series datasets
         train_dates, X_train, Y_train = self.make_windowed_dataset(train_df)
-        val_dates, X_val, Y_val = self.make_windowed_dataset(val_df)
+        val_dates, X_val, Y_val = self.make_windowed_dataset(pd.concat([train_df[-self.T_x:], val_df]))
 
         # Define model
         input_shape = (X_train.shape[1], X_train.shape[2])
@@ -171,10 +171,10 @@ class LSTMModel(NNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'LSTM'
-        self.units = hparams.get('UNITS', 128)
+        self.units = int(hparams.get('UNITS', 128))
         self.dropout = hparams.get('DROPOUT', 0.25)
-        self.fc0_units = hparams.get('FC0_UNITS', [32])
-        self.fc1_units = hparams.get('FC1_UNITS', [16])
+        self.fc0_units = int(hparams.get('FC0_UNITS', 32))
+        self.fc1_units = int(hparams.get('FC1_UNITS', None))
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(LSTMModel, self).__init__(hparams, name, log_dir)
@@ -185,8 +185,10 @@ class LSTMModel(NNModel):
         X = Flatten()(X)
         if self.fc0_units is not None:
             X = Dense(self.fc0_units, activation='relu', name='fc0')(X)
+            X = Dropout(self.dropout)(X)
             if self.fc1_units is not None:
                 X = Dense(self.fc1_units, activation='relu', name='fc1')(X)
+                X = Dropout(self.dropout)(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
         optimizer = Adam(learning_rate=self.lr)
@@ -203,10 +205,10 @@ class GRUModel(NNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'GRU'
-        self.units = hparams.get('UNITS', 128)
+        self.units = int(hparams.get('UNITS', 128))
         self.dropout = hparams.get('DROPOUT', 0.25)
-        self.fc0_units = hparams.get('FC0_UNITS', [32])
-        self.fc1_units = hparams.get('FC1_UNITS', [16])
+        self.fc0_units = int(hparams.get('FC0_UNITS', [32]))
+        self.fc1_units = int(hparams.get('FC1_UNITS', None))
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
         super(GRUModel, self).__init__(hparams, name, log_dir)
@@ -216,8 +218,10 @@ class GRUModel(NNModel):
         X = GRU(self.units, activation='tanh', return_sequences=True, name='gru')(X_input)
         X = Flatten()(X)
         if self.fc0_units is not None:
+            X = Dropout(self.dropout)(X)
             X = Dense(self.fc0_units, activation='relu', name='fc0')(X)
             if self.fc1_units is not None:
+                X = Dropout(self.dropout)(X)
                 X = Dense(self.fc1_units, activation='relu', name='fc1')(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)
@@ -234,13 +238,13 @@ class CNN1DModel(NNModel):
 
     def __init__(self, hparams, log_dir=None):
         name = '1DCNN'
-        self.init_filters = hparams.get('FILTERS', 128)
-        self.filter_multiplier = hparams.get('FILTER_MULTIPLIER', 2)
-        self.kernel_size = hparams.get('KERNEL_SIZE', 3)
-        self.stride = hparams.get('STRIDE', 2)
-        self.n_conv_layers = hparams.get('N_CONV_LAYERS', 2)
-        self.fc0_units = hparams.get('FC0_UNITS', 32)
-        self.fc1_units = hparams.get('FC1_UNITS', 16)
+        self.init_filters = int(hparams.get('FILTERS', 128))
+        self.filter_multiplier = int(hparams.get('FILTER_MULTIPLIER', 2))
+        self.kernel_size = int(hparams.get('KERNEL_SIZE', 3))
+        self.stride = int(hparams.get('STRIDE', 2))
+        self.n_conv_layers = int(hparams.get('N_CONV_LAYERS', 2))
+        self.fc0_units = int(hparams.get('FC0_UNITS', 32))
+        self.fc1_units = int(hparams.get('FC1_UNITS', 16))
         self.dropout = hparams.get('DROPOUT', 0.25)
         self.lr = hparams.get('LR', 1e-3)
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mae', 'mse', 'rmse'] else 'mse'
@@ -248,13 +252,19 @@ class CNN1DModel(NNModel):
 
     def define_model(self, input_dim):
         X_input = Input(shape=input_dim, name='input')
+        X = X_input
         for i in range(self.n_conv_layers):
-            X = Conv1D(self.init_filters * self.filter_multiplier**i, self.kernel_size, stride=self.stride,
-                       activation='relu', name='conv' + str(i))(X_input)
+            try:
+                X = Conv1D(self.init_filters * self.filter_multiplier**i, self.kernel_size, strides=self.stride,
+                           activation='relu', name='conv' + str(i))(X)
+            except Exception as e:
+                print("Model cannot be defined with above hyperparameters", e)
         X = Flatten()(X)
         if self.fc0_units is not None:
+            X = Dropout(self.dropout)(X)
             X = Dense(self.fc0_units, activation='relu', name='fc0')(X)
             if self.fc1_units is not None:
+                X = Dropout(self.dropout)(X)
                 X = Dense(self.fc1_units, activation='relu', name='fc1')(X)
         Y = Dense(input_dim[1], activation='linear', name='output')(X)
         model = Model(inputs=X_input, outputs=Y, name=self.name)

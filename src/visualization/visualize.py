@@ -7,6 +7,7 @@ import seaborn as sns
 import yaml
 import math
 import os
+from skopt.plots import plot_objective
 
 # Set some matplotlib parameters
 mpl.rcParams['figure.figsize'] = (20, 15)
@@ -233,3 +234,42 @@ def produce_data_visualizations(preprocessed_path=None, client_path=None):
     plt.clf()
     visualize_client_dataset_stats(client_df, save_fig=True)
     return
+
+
+def plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=False):
+    '''
+    Plot all 2D hyperparameter comparisons from the logs of a Bayesian hyperparameter optimization.
+    :param model_name: Name of the model
+    :param hparam_names: List of hyperparameter identifiers
+    :param search_results: The object resulting from a Bayesian hyperparameter optimization with the skopt package
+    :param save_fig:
+    :return:
+    '''
+
+    # Abbreviate hyperparameters to improve plot readability
+    axis_labels = hparam_names.copy()
+    for i in range(len(axis_labels)):
+        if len(axis_labels[i]) >= 12:
+            axis_labels[i] = axis_labels[i][:4] + '...' + axis_labels[i][-4:]
+
+    # Plot
+    axes = plot_objective(result=search_results, dimensions=axis_labels)
+
+    # Create a title
+    fig = plt.gcf()
+    fig.suptitle('Bayesian Hyperparameter\n Optimization for ' + model_name, fontsize=15, x=0.65, y=0.97)
+
+    # Indicate which hyperparameter abbreviations correspond with which hyperparameter
+    hparam_abbrs_text = ''
+    for i in range(len(hparam_names)):
+        hparam_abbrs_text += axis_labels[i] + ':\n'
+    fig.text(0.50, 0.8, hparam_abbrs_text, fontsize=10, style='italic', color='mediumblue')
+    hparam_names_text = ''
+    for i in range(len(hparam_names)):
+        hparam_names_text += hparam_names[i] + '\n'
+    fig.text(0.65, 0.8, hparam_names_text, fontsize=10, color='darkblue')
+
+    fig.tight_layout()
+    if save_fig:
+        plt.savefig(cfg['PATHS']['EXPERIMENT_VISUALIZATIONS'] + 'Bayesian_opt_' + model_name + '_' +
+                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
