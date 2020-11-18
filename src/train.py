@@ -131,20 +131,27 @@ def train_all(cfg, save_models=False, write_logs=False):
     return metrics_df
 
 
-def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, last_folds=None, file_path=None):
+def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=None, last_folds=None, save_results=False):
     '''
     Perform a nested cross-validation with day-forward chaining. Results are saved in CSV format.
     :param cfg: project config
     :param dataset: A DataFrame consisting of the entire dataset
+    :param metrics: list of metrics to report
     :param model_name: String identifying model
     :param last_folds: Limit cross validation to the most recent last_folds folds
-    :param file_path: Path to save results as CSV
+    :param save_results: Flag indicating whether to save results
     :return DataFrame of metrics
     '''
 
     n_folds = cfg['TRAIN']['N_FOLDS']
+    if dataset is None:
+        dataset = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
+        dataset['Date'] = pd.to_datetime(dataset['Date'])
+        dataset = dataset[50:-50]  # TODO: Update this!
     if last_folds is None:
         last_folds = n_folds
+    if metrics is None:
+        metrics = ['residuals_mean', 'residuals_std', 'error_mean', 'error_std', 'MAE', 'MAPE', 'MSE', 'RMSE']
     n_rows = n_folds if last_folds is None else last_folds
     metrics_df = pd.DataFrame(np.zeros((n_rows + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
     metrics_df['Fold'] = list(range(n_folds - last_folds + 1, n_folds + 1)) + ['mean', 'std']
@@ -188,7 +195,9 @@ def cross_validation(cfg, metrics, dataset, model_name=None, hparams=None, last_
         metrics_df[metric][last_folds + 1] = metrics_df[metric][0:-2].std()
 
     # Save results
-    if file_path is not None:
+    if save_results:
+        file_path = cfg['PATHS']['EXPERIMENTS'] + 'cross_val_' + model_name + \
+                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.csv'
         metrics_df.to_csv(file_path, columns=metrics_df.columns, index_label=False, index=False)
     return metrics_df
 
@@ -234,11 +243,11 @@ def bayesian_hparam_optimization(cfg):
     def objective(vals):
         hparams = dict(zip(hparam_names, vals))
         print('HPARAM VALUES: ', hparams)
-        #scores = cross_validation(cfg, [objective_metric], dataset, model_name=model_name, hparams=hparam_dict,
-        #                          last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
-        #score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
-        test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
-        score = test_metrics['MAPE']
+        scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams,
+                                  last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
+        score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
+        #test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
+        #score = test_metrics['MAPE']
         return score   # We aim to minimize error
     search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',
                                  n_calls=cfg['TRAIN']['HPARAM_SEARCH']['MAX_EVALS'], verbose=True)
@@ -259,7 +268,7 @@ def bayesian_hparam_optimization(cfg):
         results[hparam_names[i]].append(search_results.x[i])
     results_df = pd.DataFrame(results)
     results_path = cfg['PATHS']['EXPERIMENTS'] + 'hparam_search_' + model_name + \
-                   datetime.datetime.now().strftime("%Y%m%d-%H%M%S" + '.csv')
+                   datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.csv'
     results_df.to_csv(results_path, index_label=False, index=False)
 
 
@@ -286,6 +295,8 @@ def train_experiment(cfg=None, experiment='single_train', save_model=False, writ
         train_all(cfg, save_models=save_model)
     elif experiment == 'hparam_search':
         bayesian_hparam_optimization(cfg)
+    elif experiment == 'cross_validation':
+        cross_validation(cfg, save_results=True)
     else:
         raise Exception("Invalid entry in TRAIN > EXPERIMENT field of config.yml.")
     return
