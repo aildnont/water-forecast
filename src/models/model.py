@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from abc import ABCMeta, abstractmethod
+from sklearn.model_selection import TimeSeriesSplit
 from src.visualization.visualize import plot_model_evaluation
 
 class ModelStrategy(object):
@@ -27,11 +28,11 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def evaulate(self, train_set, test_set):
+    def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
         Abstract method for model evaluation
         '''
-        pass
+        return None
 
 
     @abstractmethod
@@ -57,52 +58,7 @@ class ModelStrategy(object):
         return
 
 
-    def cross_validation(self, dataset, n_folds, valid_frac, metrics, file_path=None):
-        '''
-        Perform a nested cross-validation with day-forward chaining. Results are saved in CSV format.
-        :param X: Training data indexed by date
-        :param Y: Prediction target, i.e. total daily water consumption
-        :param n_folds: Number of folds for cross validation
-        :param valid_frac: Fraction of initial dataset to devote to validation
-        :param metrics: List of metrics to keep track of
-        :return DataFrame of metrics
-        '''
-
-        if (valid_frac*(n_folds + 1) > 1):
-            raise Exception('Validation set should not be larger than training set. Decrease valid_frac and/or n_folds.')
-
-        metrics_df = pd.DataFrame(np.zeros((n_folds + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
-        metrics_df['Fold'] = list(range(1, n_folds + 1)) + ['mean', 'std']
-
-        # Train a model n_folds times with different folds
-        for i in range(n_folds):
-            self.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-
-            # Separate into training and test sets
-            test_end_idx = dataset.shape[0] - i*valid_frac*dataset.shape[0]
-            test_start_idx = test_end_idx - valid_frac*dataset.shape[0]
-            train_set = dataset[0:test_start_idx]
-            test_set = dataset[0:test_start_idx]
-
-            # Train the model and evaluate performance on test set
-            self.fit(train_set)
-            test_metrics = self.evaulate(test_set)
-            for metric in test_metrics:
-                if metric in metrics_df.columns:
-                    metrics_df[metric][i] = test_metrics[metric]
-
-        # Record mean and standard deviation of test set results
-        for metric in metrics:
-            metrics_df[metric][n_folds] = metrics_df[metric][0:-2].mean()
-            metrics_df[metric][n_folds + 1] = metrics_df[metric][0:-2].std()
-
-        # Save results
-        if file_path is not None:
-            metrics_df.to_csv(file_path, columns=metrics_df.columns, index_label=False, index=False)
-        return metrics_df
-
-
-    def evaluate_forecast(self, forecast_df, plot=True, save_dir=None):
+    def evaluate_forecast(self, forecast_df, save_dir=None, plot=False):
         '''
         Given ground truth data and forecasts, assess the model's performance by computing using time series regression
         metrics. Optionally visualize the ground truth, residuals and forecasts.

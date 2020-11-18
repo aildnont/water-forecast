@@ -13,13 +13,13 @@ class SARIMAModel(ModelStrategy):
         model = None
         name = 'SARIMA'
         self.auto_params = hparams.get('AUTO_PARAMS', False)
-        self.trend_p = hparams.get('TREND_P', 10)
-        self.trend_d = hparams.get('TREND_D', 2)
-        self.trend_q = hparams.get('TREND_Q', 0)
-        self.seasonal_p = hparams.get('SEASONAL_P', 5)
-        self.seasonal_d = hparams.get('SEASONAL_D', 2)
-        self.seasonal_q = hparams.get('SEASONAL_Q', 0)
-        self.m = hparams.get('M', 12)
+        self.trend_p = int(hparams.get('TREND_P', 10))
+        self.trend_d = int(hparams.get('TREND_D', 2))
+        self.trend_q = int(hparams.get('TREND_Q', 0))
+        self.seasonal_p = int(hparams.get('SEASONAL_P', 5))
+        self.seasonal_d = int(hparams.get('SEASONAL_D', 2))
+        self.seasonal_q = int(hparams.get('SEASONAL_Q', 0))
+        self.m = int(hparams.get('M', 12))
         super(SARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
@@ -49,11 +49,13 @@ class SARIMAModel(ModelStrategy):
         return
 
 
-    def evaluate(self, train_set, test_set, save_dir=None):
+    def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
         Evaluates performance of SARIMA model on test set
         :param train_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param test_set: A Pandas DataFrame with 2 columns: Date and Consumption
+        :param save_dir: Directory in which to save forecast metrics
+        :param plot: Flag indicating whether to plot the forecast evaluation
         '''
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
@@ -63,11 +65,19 @@ class SARIMAModel(ModelStrategy):
         test_set["forecast"] = self.forecast(test_set.shape[0])['Consumption'].tolist()
 
         df_forecast = train_set.append(test_set).rename(columns={'y': 'gt'})
-        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir)
+        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
         return test_metrics
 
 
     def forecast(self, days, recent_data=None):
+        '''
+        Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
+        The model makes a prediction for the provided example, then uses the result for the next prediction.
+        Repeat this process for a specified number of days.
+        :param days: Number of days into the future to produce a forecast for
+        :param recent_data: A factual example for the first prediction
+        :return: An array of predictions
+        '''
         forecast_df = self.model.forecast(steps=days).reset_index(level=0)
         forecast_df.columns = ['Date', 'Consumption']
         return forecast_df

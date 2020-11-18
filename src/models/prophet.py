@@ -17,21 +17,25 @@ class ProphetModel(ModelStrategy):
         self.holidays_prior_scale = hparams.get('HOLIDAYS_PRIOR_SCALE', 10)
         self.seasonality_mode = hparams.get('SEASONALITY_MODE', 'additive')
         self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.8)
+        self.country = hparams.get('COUNTRY', 'CA')
 
         # Build DataFrame of local holidays
-        holiday_dfs = []
-        for holiday in hparams.get('HOLIDAYS', []):
-            holiday_dfs.append(pd.DataFrame({
-                'holiday': holiday,
-                'ds': pd.to_datetime(hparams['HOLIDAYS'][holiday]),
-                'lower_window': 0,
-                'upper_window': 1}))
-        self.local_holidays = pd.concat(holiday_dfs)
+        if hparams.get('HOLIDAYS', None) is None:
+            self.local_holidays = None
+        else:
+            holiday_dfs = []
+            for holiday in hparams.get('HOLIDAYS', []):
+                holiday_dfs.append(pd.DataFrame({
+                    'holiday': holiday,
+                    'ds': pd.to_datetime(hparams['HOLIDAYS'][holiday]),
+                    'lower_window': 0,
+                    'upper_window': 1}))
+            self.local_holidays = pd.concat(holiday_dfs)
 
         model = Prophet(yearly_seasonality=True, holidays=self.local_holidays, changepoint_prior_scale=self.changepoint_prior_scale,
                         seasonality_prior_scale=self.seasonality_prior_scale, holidays_prior_scale=self.holidays_prior_scale,
                         seasonality_mode=self.seasonality_mode, changepoint_range=self.changepoint_range)
-        model.add_country_holidays(country_name=hparams['COUNTRY'])   # Add country-wide holidays
+        model.add_country_holidays(country_name=self.country)   # Add country-wide holidays
         super(ProphetModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
@@ -47,11 +51,13 @@ class ProphetModel(ModelStrategy):
         return
 
 
-    def evaluate(self, train_set, test_set, save_dir=None):
+    def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
         Evaluates performance of Prophet model on test set
         :param train_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param test_set: A Pandas DataFrame with 2 columns: Date and Consumption
+        :param save_dir: Directory in which to save forecast metrics
+        :param plot: Flag indicating whether to plot the forecast evaluation
         '''
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
@@ -62,11 +68,19 @@ class ProphetModel(ModelStrategy):
         df_test = test_set.merge(df_prophet[["ds", "yhat"]],
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
-        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir)
+        test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
         return test_metrics
 
 
     def forecast(self, days, recent_data=None):
+        '''
+        Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
+        The model makes a prediction for the provided example, then uses the result for the next prediction.
+        Repeat this process for a specified number of days.
+        :param days: Number of days into the future to produce a forecast for
+        :param recent_data: A factual example for the first prediction
+        :return: An array of predictions
+        '''
         future_dates = self.model.make_future_dataframe(periods=days)
         forecast_df = self.model.predict(future_dates)[['ds', 'yhat']]
         forecast_df.rename(columns={'ds': 'Date', 'yhat': 'Consumption'}, inplace=True)

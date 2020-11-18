@@ -17,7 +17,7 @@ class SKLearnModel(ModelStrategy):
 
     def __init__(self, hparams, name, log_dir):
         self.univariate = hparams.get('UNIVARIATE', False)
-        self.T_x = hparams.get('T_X', 32)
+        self.T_x = int(hparams.get('T_X', 32))
         self.standard_scaler = StandardScaler()
         self.forecast_start = datetime.datetime.today()
         model = None
@@ -205,7 +205,7 @@ class RandomForestModel(SKLearnModel):
 
     def __init__(self, hparams, log_dir=None):
         name = 'RandomForest'
-        self.n_estimators = hparams.get('N_ESTIMATORS', 100)
+        self.n_estimators = int(hparams.get('N_ESTIMATORS', 100))
         self.loss = hparams.get('LOSS', 'mse') if hparams.get('LOSS', 'mse') in ['mse', 'mae'] else 'mse'
         super(RandomForestModel, self).__init__(hparams, name, log_dir)
 
