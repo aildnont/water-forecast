@@ -130,7 +130,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
     print(raw_df['CONTRACT_ACCOUNT'].nunique())
     if eval_date is None:
-        eval_date = pd.to_datetime(cfg['DATA']['EVAL_DATE'])
+        eval_date = pd.to_datetime(cfg['K-PROTOTYPES']['EVAL_DATE'])
     min_date = eval_date - relativedelta(years=1)
     raw_df = raw_df.loc[raw_df['END_DATE'] >= min_date]
 
