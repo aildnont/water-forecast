@@ -7,7 +7,7 @@ from skopt import gp_minimize
 from skopt.space import Real, Categorical, Integer
 from src.models.prophet import ProphetModel
 from src.models.arima import ARIMAModel
-from src.models.sarima import SARIMAModel
+from src.models.sarimax import SARIMAXModel
 from src.models.nn import *
 from src.models.skmodels import *
 from src.data.preprocess import preprocess_ts
@@ -17,7 +17,7 @@ from src.visualization.visualize import plot_bayesian_hparam_opt
 MODELS_DEFS = {
     'PROPHET': ProphetModel,
     'ARIMA': ARIMAModel,
-    'SARIMA': SARIMAModel,
+    'SARIMAX': SARIMAXModel,
     'LSTM': LSTMModel,
     'GRU': GRUModel,
     '1DCNN': CNN1DModel,
@@ -250,7 +250,7 @@ def bayesian_hparam_optimization(cfg):
         #score = test_metrics['MAPE']
         return score   # We aim to minimize error
     search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',
-                                 n_calls=cfg['TRAIN']['HPARAM_SEARCH']['MAX_EVALS'], verbose=True)
+                                 n_calls=cfg['TRAIN']['HPARAM_SEARCH']['N_EVALS'], verbose=True)
     print(search_results)
     plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=True)
 

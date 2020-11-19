@@ -3,7 +3,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
 import os
 from src.models.model import ModelStrategy
 
-class SARIMAModel(ModelStrategy):
+class SARIMAXModel(ModelStrategy):
     '''
     A class for a Seasonal Autoregressive Integrated Moving Average Model and the standard operations on it
     '''
@@ -11,7 +11,7 @@ class SARIMAModel(ModelStrategy):
     def __init__(self, hparams, log_dir=None):
         univariate = True
         model = None
-        name = 'SARIMA'
+        name = 'SARIMAX'
         self.auto_params = hparams.get('AUTO_PARAMS', False)
         self.trend_p = int(hparams.get('TREND_P', 10))
         self.trend_d = int(hparams.get('TREND_D', 2))
@@ -20,12 +20,12 @@ class SARIMAModel(ModelStrategy):
         self.seasonal_d = int(hparams.get('SEASONAL_D', 2))
         self.seasonal_q = int(hparams.get('SEASONAL_Q', 0))
         self.m = int(hparams.get('M', 12))
-        super(SARIMAModel, self).__init__(model, univariate, name, log_dir=log_dir)
+        super(SARIMAXModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
     def fit(self, dataset):
         '''
-        Fits a SARIMA forecasting model
+        Fits a SARIMAX forecasting model
         :param dataset: A Pandas DataFrame with 2 columns: Date and Consumption
         '''
         if dataset.shape[1] != 2:
@@ -39,7 +39,7 @@ class SARIMAModel(ModelStrategy):
                                              error_action='ignore')     # Automatically determine model parameters
             order = best_model.order
             seasonal_order = best_model.seasonal_order
-            print("Best SARIMA params: (p, d, q):", best_model.order, " and  (P, D, Q, s):", best_model.seasonal_order)
+            print("Best SARIMAX params: (p, d, q):", best_model.order, " and  (P, D, Q, s):", best_model.seasonal_order)
         else:
             order = (self.trend_p, self.trend_d, self.trend_q)
             seasonal_order = (self.seasonal_p, self.seasonal_d, self.seasonal_q, self.m)
@@ -51,7 +51,7 @@ class SARIMAModel(ModelStrategy):
 
     def evaluate(self, train_set, test_set, save_dir=None, plot=False):
         '''
-        Evaluates performance of SARIMA model on test set
+        Evaluates performance of SARIMAX model on test set
         :param train_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param test_set: A Pandas DataFrame with 2 columns: Date and Consumption
         :param save_dir: Directory in which to save forecast metrics

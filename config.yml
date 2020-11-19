@@ -2,13 +2,11 @@
 PATHS:
   RAW_DATA_DIR: 'data/raw/'
   RAW_DATASET: 'data/raw/raw_data.csv'
-  CONSUMPTION_DATA: 'data/preprocessed/consumption_data.csv'
   PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
   INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
-  MODEL_TO_LOAD: 'results/models/model.h5'
   DATA_VISUALIZATIONS: 'img/data_visualizations/'
   FORECAST_VISUALIZATIONS: 'img/forecast_visualizations/'
   EXPERIMENT_VISUALIZATIONS: 'img/experiment_visualizations/'
@@ -31,23 +29,23 @@ DATA:
   CATEGORICAL_FEATS: ['RATE_CLASS', 'METER_SIZE', 'INST_TYPE', 'EST_READ']
   BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
                   'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
-  EVAL_DATE: '2020-09-17'
   TEST_FRAC: 0.2
 
 # Training experiments
 TRAIN:
-  MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarima', 'random_forest', 'linear_regression']
-  EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
+  MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
+  EXPERIMENT: 'cross_validation'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
   N_FOLDS: 6
   HPARAM_SEARCH:
-    MAX_EVALS: 500
+    N_EVALS: 500
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
 
 # Forecasting
 FORECAST:
-  MODEL: 'prophet'
+  MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
   MODEL_PATH: 'C:/Users/Blake/Documents/Work/Projects/h2o-forecast/results/models/Prophet.pkl'
+  DAYS: 100
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -70,7 +68,7 @@ HPARAMS:
     P: 7
     D: 1
     Q: 30
-  SARIMA:
+  SARIMAX:
     AUTO_PARAMS: false
     TREND_P: 7
     TREND_D: 1
@@ -172,9 +170,6 @@ HPARAM_SEARCH:
     FC1_UNITS:
       TYPE: 'set'
       RANGE: [16, 32, 64]
-    #FC2_UNITS:
-    #  TYPE: 'set'
-    #  RANGE: [8, 16, 32, 64]
   1DCNN:
     T_X:
       TYPE: 'int_uniform'
@@ -224,4 +219,5 @@ K-PROTOTYPES:
   K_MIN: 3
   K_MAX: 12
   FEATS_TO_EXCLUDE: ['RATE_CLASS', 'NOM', 'REDUC_FAC', 'SSF', 'W_HEC_AF', 'RES_LDM', 'RES_MDM', 'RES_HR']
+  EVAL_DATE: '2020-09-17'
   EXPERIMENT: 'cluster_clients'               # One of {'cluster_clients', 'silhouette_analysis'}
