@@ -22,11 +22,12 @@ their own locales.
    [_Forecasting  with  a  trained  model_](#forecasting-with-a-trained-model)  
    v) [_Cross validation_](#cross-validation)  
    vi)
-   [_Client clustering experiment (using K-Prototypes)_](#client-clustering-experiment-using-k-prototypes)
-3. [**_Data Preprocessing_**](#data-preprocessing)
-4. [**_Project Structure_**](#project-structure)
-5. [**_Project Config_**](#project-config)
-6. [**_Contact_**](#contact)
+   [_Client clustering experiment (using K-Prototypes)_](#client-clustering-experiment-using-k-prototypes)  
+   vii) [_Model interpretability_](#model-interpretability)
+4. [**_Data Preprocessing_**](#data-preprocessing)
+5. [**_Project Structure_**](#project-structure)
+6. [**_Project Config_**](#project-config)
+7. [**_Contact_**](#contact)
 
 ## Getting Started
 1. Clone this repository (for help see this
@@ -304,6 +305,31 @@ steps.
    _k_ = 3 is the best number of clusters.
    ![alt text](img/readme/silhouette_plot_example.png "A sample
    Silhouette plot")
+
+### Model interpretability
+To gain insight into model functionality, we delved into the
+interpretability of our selected model. Currently, only the Prophet
+model is supported. The Prophet model is inherently interpretable, since
+it is a composition of interpretable functional components for trend,
+weekly periodicity, yearly periodicity, and holidays. The four
+components can be saved and plotted by following the below steps:
+1. In [config.yml](config.yml), set _TRAIN >> INTERPRETABILITY_ to
+   _true_. Set _TRAIN >> MODEL_ to _'prophet'_.
+2. Follow the steps in this document to run any training experiment
+   (e.g. [single train](#train-a-model-and-visualize-a-forecast), [train
+   all](#train-all-models), [cross validation](#cross-validation)).
+3. Upon completion of training, the values comprising the 4 components
+   are saved to separate files in a new folder named
+   _results/interpretability/Prophet\_{yyyymmdd-hhmmss}/_, where
+   _{yyyymmdd-hhmmss}_ is the current datetime. The trend and holiday
+   components are saved to CSV files detailing weights for each date.
+   The weekly and yearly seasonality components are saved to JSON files
+   containing their respective preiodic function parameters. A
+   visualization of the components of the Prophet model can be found in
+   _img/interpretability\_visualizations/Prophet\_components\_{yyyymmdd-hhmmss}.png_.
+   See below for an example of a visualization of the components of a
+   Prophet model. ![alt text](img/readme/Prophet_components.png "An
+   example of Prophet components")
 
 ## Data preprocessing
 Our data preprocessing method is implemented in

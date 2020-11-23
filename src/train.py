@@ -38,7 +38,7 @@ def load_dataset(cfg):
         print("No file found at " + cfg['PATHS']['PREPROCESSED_DATA'] + ". Running preprocessing of client data.")
         df = preprocess_ts(cfg, save_df=False)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df[274:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
+    df = df[50:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
 
     # Define training and test sets
     train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
@@ -75,6 +75,8 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
     # Evaluate the model on the test set
     save_dir = cfg['PATHS']['EXPERIMENTS'] if save_metrics else None
     test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=save_dir, plot=save_metrics)
+    if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
+        model.decompose(cfg['PATHS']['INTERPRETABILITY'])
     return test_forecast_metrics
 
 

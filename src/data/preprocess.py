@@ -16,7 +16,7 @@ def load_raw_data(cfg, save_int_df=False):
     num_feats = cfg['DATA']['NUMERICAL_FEATS']
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
     feat_names = ['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats
-    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*/*.csv")
+    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/quarterly/*.csv")
     raw_cons_dfs = []
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
@@ -77,6 +77,7 @@ def calculate_ts_data(cfg, raw_df):
     # Determine feature names for preprocessed dataset
     date_range = pd.date_range(start=min_date, end=max_date)
     daily_df_feat_init = {'Date': date_range, 'Consumption': 0}
+    '''
     for f in num_feats:
         daily_df_feat_init[f + '_avg'] = 0
         daily_df_feat_init[f + '_std'] = 0
@@ -85,20 +86,22 @@ def calculate_ts_data(cfg, raw_df):
     for f in cat_feats:
         for val in raw_df[f].unique():
             daily_df_feat_init[f + '_' + str(val)] = 0
+    '''
     daily_df = pd.DataFrame(daily_df_feat_init)
     daily_df.set_index('Date', inplace=True)
 
     def daily_consumption(cons, start_date, end_date):
-        bill_period = (end_date - start_date).days
+        bill_period = (end_date - start_date + timedelta(days=1)).days      # Get length of billing period
         if bill_period > 0:
-            return cons / bill_period
+            return cons / bill_period                   # Estimate consumption per day over billing period
         else:
             return 0
 
     # Populating features for daily prediction
     print('Calculating estimates for daily consumption.')
     for date in tqdm(date_range):
-        daily_snapshot = raw_df.loc[(raw_df['EFFECTIVE_DATE'] <= date) & (raw_df['END_DATE'] > date)]
+        daily_snapshot = raw_df.loc[(raw_df['EFFECTIVE_DATE'] <= date) & (raw_df['END_DATE'] >= date)]
+        '''
         for f in num_feats:
             daily_df.loc[date, f + '_avg'] = daily_snapshot[f].mean()
             daily_df.loc[date, f + '_std'] = daily_snapshot[f].std()
@@ -108,6 +111,7 @@ def calculate_ts_data(cfg, raw_df):
             fractions = daily_snapshot[f].value_counts(normalize=True)
             for val, fraction in fractions.items():
                 daily_df.loc[date, f + '_' + str(val)] = fraction
+        '''
         try:
             daily_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
                          row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
