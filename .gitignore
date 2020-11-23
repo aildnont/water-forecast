@@ -6,11 +6,13 @@ data/serializations/*
 img/data_visualizations/*
 img/forecast_visualizations/*
 img/experiment_visualizations/*
+img/interpretability_visualizations/*
 results/experiments/*
 results/logs/training/*
 results/logs/hparam_search/*
 results/models/*
 results/predictions/*
+results/interpretability/*
 azure/ws_config.json
 azure/.ipynb_checkpoints
 /.amlignore
@@ -22,11 +24,13 @@ azure/.ipynb_checkpoints
 !img/data_visualizations/.gitkeep
 !img/forecast_visualizations/.gitkeep
 !img/experiment_visualizations/.gitkeep
+!img/interpretability_visualizations/.gitkeep
 !results/logs/training/.gitkeep
 !results/logs/hparam_search/.gitkeep
 !results/models/.gitkeep
 !results/experiments/.gitkeep
 !results/predictions/.gitkeep
+!results/interpretability/.gitkeep
 
 # Credentials to keep private
 config-private.yml

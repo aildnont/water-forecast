@@ -273,3 +273,19 @@ def plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=
     if save_fig:
         plt.savefig(cfg['PATHS']['EXPERIMENT_VISUALIZATIONS'] + 'Bayesian_opt_' + model_name + '_' +
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+
+
+def plot_prophet_components(prophet_model, forecast):
+    '''
+    Plot Prophet model's forecast components. This plot visualizes trend, yearly seasonality, weekly seasonality,
+    holiday effects
+    :param prophet_model: Fitted Prophet model
+    :param forecast: A forecast from a Prophet model
+    '''
+
+    fig = prophet_model.plot_components(forecast)
+    fig.suptitle('Prophet Model Components', fontsize=15)
+    fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
+    plt.savefig(cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] + 'Prophet_components' +
+                datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+    return

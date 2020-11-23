@@ -2,7 +2,10 @@ from fbprophet import Prophet
 from dill import dump, load
 import pandas as pd
 import os
+import json
+import datetime
 from src.models.model import ModelStrategy
+from src.visualization.visualize import plot_prophet_components
 
 class ProphetModel(ModelStrategy):
     '''
@@ -62,10 +65,10 @@ class ProphetModel(ModelStrategy):
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         df_prophet = self.model.make_future_dataframe(periods=test_set.shape[0], include_history=True, freq='D')
-        df_prophet = self.model.predict(df_prophet)
-        df_train = train_set.merge(df_prophet[["ds", "yhat"]],
+        self.future_prediction = self.model.predict(df_prophet)
+        df_train = train_set.merge(self.future_prediction[["ds", "yhat"]],
                                     how="left").rename(columns={'yhat': 'model', 'y': 'gt'}).set_index("ds")
-        df_test = test_set.merge(df_prophet[["ds", "yhat"]],
+        df_test = test_set.merge(self.future_prediction[["ds", "yhat"]],
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
         test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
@@ -82,7 +85,8 @@ class ProphetModel(ModelStrategy):
         :return: An array of predictions
         '''
         future_dates = self.model.make_future_dataframe(periods=days)
-        forecast_df = self.model.predict(future_dates)[['ds', 'yhat']]
+        self.future_prediction = self.model.predict(future_dates)
+        forecast_df = self.future_prediction[['ds', 'yhat']]
         forecast_df.rename(columns={'ds': 'Date', 'yhat': 'Consumption'}, inplace=True)
         return forecast_df
 
@@ -106,6 +110,30 @@ class ProphetModel(ModelStrategy):
             raise Exception('Model file path for ' + self.name + ' must have ".pkl" extension.')
         self.model = load(open(model_path, 'rb'))
         return
+
+
+    def decompose(self, save_dir):
+        '''
+        Decompose model into its trend, holiday, weekly and yearly components. Generate a plot and save parameters.
+        Creates a new directory within save_dir to capture all components of the model in separate files.
+        :param save_dir: Directory in which to save the results
+        '''
+
+        if not (self.model or self.future_prediction):
+            return
+        results_dir = save_dir + 'Prophet_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/'
+        try:
+            os.mkdir(results_dir)
+        except OSError:
+            print("Creation of directory %s failed" % results_dir)
+        self.future_prediction[['ds', 'trend']].to_csv(results_dir + 'trend_component.csv', sep=',', header=True, index=False)
+        self.future_prediction[['ds', 'holidays']].to_csv(results_dir + 'holidays_component.csv', sep=',', header=True, index=False)
+        with open(results_dir + 'weekly_component.json', 'w') as fp:
+            json.dump(self.model.seasonalities['weekly'], fp)
+        with open(results_dir + 'yearly_component.json', 'w') as fp:
+            json.dump(self.model.seasonalities['yearly'], fp)
+        plot_prophet_components(self.model, self.future_prediction)
+
 
 
 
