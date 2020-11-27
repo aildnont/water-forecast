@@ -19,7 +19,7 @@ class ProphetModel(ModelStrategy):
         self.seasonality_prior_scale = hparams.get('SEASONALITY_PRIOR_SCALE', 10)
         self.holidays_prior_scale = hparams.get('HOLIDAYS_PRIOR_SCALE', 10)
         self.seasonality_mode = hparams.get('SEASONALITY_MODE', 'additive')
-        self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.8)
+        self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.95)
         self.country = hparams.get('COUNTRY', 'CA')
 
         # Build DataFrame of local holidays

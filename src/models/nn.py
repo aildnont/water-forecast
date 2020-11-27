@@ -110,8 +110,8 @@ class NNModel(ModelStrategy):
         # Create a DataFrame of combined training set predictions and test set forecast with ground truth
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
-        df_test = pd.DataFrame({'ds': test_forecast_dates, 'gt': test_set['Consumption'],
-                                 'forecast': test_forecast_df['Consumption'], 'test_pred': test_preds[:,consumption_idx]})
+        df_test = pd.DataFrame({'ds': test_forecast_dates.tolist(), 'gt': test_set['Consumption'].tolist(),
+                                 'forecast': test_forecast_df['Consumption'].tolist(), 'test_pred': test_preds[:,consumption_idx].tolist()})
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast
@@ -174,9 +174,9 @@ class NNModel(ModelStrategy):
         :param dataset: Pandas DataFrame indexed by date
         :return: A windowed time series dataset of shape (# rows, T_x, # features)
         '''
-        dates = dataset['Date'][self.T_x - 1:].tolist()
+        dates = dataset['Date'][self.T_x:].tolist()
         unindexed_dataset = dataset.loc[:, dataset.columns != 'Date']
-        X = np.zeros((unindexed_dataset.shape[0] - self.T_x + 1, self.T_x, unindexed_dataset.shape[1]))
+        X = np.zeros((unindexed_dataset.shape[0] - self.T_x, self.T_x, unindexed_dataset.shape[1]))
         Y = unindexed_dataset[self.T_x:].to_numpy()
         for i in range(X.shape[0]):
             X[i] = unindexed_dataset[i:i+self.T_x].to_numpy()

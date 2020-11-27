@@ -37,6 +37,7 @@ def load_raw_data(cfg, save_int_df=False):
 
     print('Dropping duplicate rows.')
     raw_df = raw_df.drop_duplicates()   # Drop duplicate entries appearing in different data slices
+    print('Consumption total: ', raw_df['CONSUMPTION'].sum())
     print(raw_df.shape)
     raw_df['EFFECTIVE_DATE'] = pd.to_datetime(raw_df['EFFECTIVE_DATE'], errors='coerce')
     raw_df['END_DATE'] = pd.to_datetime(raw_df['END_DATE'], errors='coerce')
