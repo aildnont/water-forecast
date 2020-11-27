@@ -215,7 +215,7 @@ def bayesian_hparam_optimization(cfg):
     dataset['Date'] = pd.to_datetime(dataset['Date'])
     dataset = dataset[50:-50]  # TODO: Update this!
 
-    model_name = cfg['TRAIN']['MOfDEL'].upper()
+    model_name = cfg['TRAIN']['MODEL'].upper()
     objective_metric = cfg['TRAIN']['HPARAM_SEARCH']['HPARAM_OBJECTIVE']
     results = {'Trial': [], objective_metric: []}
     dimensions = []
@@ -245,11 +245,11 @@ def bayesian_hparam_optimization(cfg):
     def objective(vals):
         hparams = dict(zip(hparam_names, vals))
         print('HPARAM VALUES: ', hparams)
-        scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams,
-                                  last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
-        score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
-        #test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
-        #score = test_metrics['MAPE']
+        #scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams,
+        #                          last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
+        #score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
+        test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
+        score = test_metrics['MAPE']
         return score   # We aim to minimize error
     search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',
                                  n_calls=cfg['TRAIN']['HPARAM_SEARCH']['N_EVALS'], verbose=True)
