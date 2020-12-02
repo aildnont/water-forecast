@@ -5,10 +5,11 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-def load_raw_data(cfg, save_int_df=False):
+def load_raw_data(cfg, save_raw_df=False):
     '''
     Load all entries for water consumption and combine into a single dataframe
     :param cfg: project config
+    :param save_raw_df: Flag indicating whether to save the accumulated raw dataset
     :return: a Pandas dataframe containing all water consumption records
     '''
 
@@ -16,7 +17,7 @@ def load_raw_data(cfg, save_int_df=False):
     num_feats = cfg['DATA']['NUMERICAL_FEATS']
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
     feat_names = ['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats
-    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/quarterly/*.csv")
+    raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
     raw_cons_dfs = []
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
@@ -53,8 +54,8 @@ def load_raw_data(cfg, save_int_df=False):
     raw_df[['CONSUMPTION'] + num_feats + bool_feats] = raw_df[['CONSUMPTION'] + num_feats + bool_feats].fillna(0)
     raw_df[cat_feats] = raw_df[cat_feats].fillna('MISSING')
 
-    if save_int_df:
-        raw_df.to_csv(cfg['PATHS']['INTERMEDIATE_DATA'], sep=',', header=True, index_label=False, index=False)
+    if save_raw_df:
+        raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
     return raw_df
 
 
@@ -67,6 +68,7 @@ def calculate_ts_data(cfg, raw_df):
     :return: a Pandas dataframe containing estimated daily water consumption
     '''
 
+    print('Calculating estimates for daily consumption and contextual features.')
     raw_df.drop('CONTRACT_ACCOUNT', axis=1, inplace=True)
     min_date = raw_df['EFFECTIVE_DATE'].min()
     max_date = raw_df['END_DATE'].max() - timedelta(days=1)
@@ -78,7 +80,7 @@ def calculate_ts_data(cfg, raw_df):
     # Determine feature names for preprocessed dataset
     date_range = pd.date_range(start=min_date, end=max_date)
     daily_df_feat_init = {'Date': date_range, 'Consumption': 0}
-    '''
+
     for f in num_feats:
         daily_df_feat_init[f + '_avg'] = 0
         daily_df_feat_init[f + '_std'] = 0
@@ -87,7 +89,7 @@ def calculate_ts_data(cfg, raw_df):
     for f in cat_feats:
         for val in raw_df[f].unique():
             daily_df_feat_init[f + '_' + str(val)] = 0
-    '''
+
     daily_df = pd.DataFrame(daily_df_feat_init)
     daily_df.set_index('Date', inplace=True)
 
@@ -99,10 +101,9 @@ def calculate_ts_data(cfg, raw_df):
             return 0
 
     # Populating features for daily prediction
-    print('Calculating estimates for daily consumption.')
     for date in tqdm(date_range):
         daily_snapshot = raw_df.loc[(raw_df['EFFECTIVE_DATE'] <= date) & (raw_df['END_DATE'] >= date)]
-        '''
+
         for f in num_feats:
             daily_df.loc[date, f + '_avg'] = daily_snapshot[f].mean()
             daily_df.loc[date, f + '_std'] = daily_snapshot[f].std()
@@ -112,7 +113,7 @@ def calculate_ts_data(cfg, raw_df):
             fractions = daily_snapshot[f].value_counts(normalize=True)
             for val, fraction in fractions.items():
                 daily_df.loc[date, f + '_' + str(val)] = fraction
-        '''
+
         try:
             daily_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
                          row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
@@ -120,6 +121,44 @@ def calculate_ts_data(cfg, raw_df):
             print(date, e)
             daily_df.loc[date, 'Consumption'] = 0
     return daily_df
+
+
+def preprocess_new_data(cfg, save_df=True):
+    '''
+    Preprocess a new raw data file and merge it with preexisting preprocessed data.
+    :param cfg: Project config
+    :param save_df: Flag indicating whether to save the combined preprocessed dataset
+    '''
+
+    # Load new raw data and remove any rows that appear in old raw data
+    old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
+    old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
+    old_raw_df['END_DATE'] = pd.to_datetime(old_raw_df['END_DATE'], errors='coerce')
+    new_raw_df = load_raw_data(cfg, save_raw_df=False)
+    if new_raw_df.shape[1] > old_raw_df.shape[1]:
+        new_raw_df = new_raw_df[old_raw_df.columns]  # If additional features added, remove them
+    recent_old_raw_df = old_raw_df[(old_raw_df['EFFECTIVE_DATE'] > new_raw_df['EFFECTIVE_DATE'].min()) &
+        (old_raw_df['END_DATE'] > new_raw_df['END_DATE'].min())]
+    new_raw_df = pd.concat([recent_old_raw_df, recent_old_raw_df, new_raw_df], axis=0, ignore_index=True)\
+        .drop_duplicates(keep=False)  # Keep all rows of the new raw data that don't appear in the old one
+
+    # Load old preprocessed data
+    old_preprocessed_df = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
+    old_preprocessed_df['Date'] = pd.to_datetime(old_preprocessed_df['Date'], errors='coerce')
+    old_preprocessed_df.set_index('Date', inplace=True)
+
+    # Preprocess new raw data
+    new_preprocessed_df = calculate_ts_data(cfg, new_raw_df)
+
+    # Get rows in new preprocessed data that don't exist in old preprocessed data
+    overlapping_dates = pd.merge(old_preprocessed_df, new_preprocessed_df, how='inner', on='Date').index
+    new_df_nonoverlap = new_preprocessed_df[~new_preprocessed_df.index.isin(overlapping_dates)]
+
+    # Combine old and new preprocessed data and update saved preprocessed data if specified
+    preprocessed_df = pd.concat([old_preprocessed_df, new_df_nonoverlap], axis=0)
+    if save_df:
+        preprocessed_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
+    return preprocessed_df
 
 
 def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):

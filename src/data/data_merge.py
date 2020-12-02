@@ -17,9 +17,9 @@ def merge_raw_data(cfg=None):
 
     raw_dfs = []
     if os.path.exists(cfg['PATHS']['RAW_DATASET']):
-        raw_dfs.append(pd.read_csv(cfg['PATHS']['RAW_DATASET'], encoding='ISO-8859-1', low_memory=False))
+        raw_dfs.append(pd.read_csv(cfg['PATHS']['FULL_RAW_DATASET'], encoding='ISO-8859-1', low_memory=False))
 
-    new_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*/*.csv")
+    new_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
     for filename in tqdm(new_raw_data_filenames):
         new_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
         raw_dfs.append(new_raw_df)
@@ -28,7 +28,7 @@ def merge_raw_data(cfg=None):
     print(merged_raw_df.shape)
     merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
     print(merged_raw_df.shape)
-    merged_raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
+    merged_raw_df.to_csv(cfg['PATHS']['FULL_RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
     return
 
 

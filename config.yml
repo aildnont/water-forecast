@@ -1,9 +1,9 @@
 # Relevant file/directory paths
 PATHS:
-  RAW_DATA_DIR: 'data/raw/'
+  RAW_DATA_DIR: 'data/raw/quarterly/'
   RAW_DATASET: 'data/raw/raw_data.csv'
+  FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
   PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
-  INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
