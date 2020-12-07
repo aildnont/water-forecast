@@ -1,9 +1,10 @@
+import yaml
 import argparse
 import traceback
 from azureml.core import Run
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
-from src.data.preprocess import *
+from src.data.preprocess import merge_raw_data, preprocess_new_data
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--rawdatadir', type=str, help="Water consumption raw data directory")
@@ -29,7 +30,7 @@ except:
 
 # Load and preprocess new raw data, merge with old preprocessed data, and save the result
 try:
-    preprocess_ts(cfg, save_df=True)
+    preprocess_new_data(cfg, save_df=True)
 except:
     error_email_msg += 'Error encountered in merging raw data:\n' + traceback.format_exc() + '\n\n'
 
