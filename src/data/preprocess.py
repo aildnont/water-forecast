@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import yaml
 import glob
@@ -30,7 +31,14 @@ def load_raw_data(cfg, save_raw_df=False):
                 if f in cat_feats:
                     df[f] = 'Unknown'
                 else:
-                    df[f] = 0
+                    df[f] = 0.0
+            if f in num_feats and df[f].dtype == 'object':
+                try:
+                    invalid_mask = df[f].fillna('0').str.contains('/')
+                    df[f][invalid_mask] = 0
+                    df[f] = df[f].astype('float64')
+                except Exception as e:
+                    print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
         raw_cons_dfs.append(df) # Add to list of DFs
     raw_df = pd.concat(raw_cons_dfs, axis=0, ignore_index=True)     # Concatenate all water demand data
@@ -82,13 +90,13 @@ def calculate_ts_data(cfg, raw_df):
     daily_df_feat_init = {'Date': date_range, 'Consumption': 0}
 
     for f in num_feats:
-        daily_df_feat_init[f + '_avg'] = 0
-        daily_df_feat_init[f + '_std'] = 0
+        daily_df_feat_init[f + '_avg'] = 0.0
+        daily_df_feat_init[f + '_std'] = 0.0
     for f in bool_feats:
-        daily_df_feat_init[f] = 0
+        daily_df_feat_init[f] = 0.0
     for f in cat_feats:
         for val in raw_df[f].unique():
-            daily_df_feat_init[f + '_' + str(val)] = 0
+            daily_df_feat_init[f + '_' + str(val)] = 0.0
 
     daily_df = pd.DataFrame(daily_df_feat_init)
     daily_df.set_index('Date', inplace=True)
@@ -119,7 +127,7 @@ def calculate_ts_data(cfg, raw_df):
                          row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
         except Exception as e:
             print(date, e)
-            daily_df.loc[date, 'Consumption'] = 0
+            daily_df.loc[date, 'Consumption'] = 0.0
     return daily_df
 
 
@@ -159,6 +167,33 @@ def preprocess_new_data(cfg, save_df=True):
     if save_df:
         preprocessed_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
     return preprocessed_df
+
+
+def merge_raw_data(cfg=None):
+    '''
+    Loads all raw water demand CSVs available and merges it into one dataset, keeping the latest consumption records
+    for each client if readings are duplicated.
+    :param cfg: Project config
+    '''
+
+    if cfg is None:
+        cfg = yaml.full_load(open("./config.yml", 'r'))  # Load project config data
+
+    raw_dfs = []
+    if os.path.exists(cfg['PATHS']['RAW_DATASET']):
+        raw_dfs.append(pd.read_csv(cfg['PATHS']['FULL_RAW_DATASET'], encoding='ISO-8859-1', low_memory=False))
+
+    new_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
+    for filename in tqdm(new_raw_data_filenames):
+        new_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
+        raw_dfs.append(new_raw_df)
+
+    merged_raw_df = pd.concat(raw_dfs, axis=0, ignore_index=True)  # Concatenate all available water demand data
+    print('Shape before deduplication: ', merged_raw_df.shape)
+    merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
+    print('Shape after deduplication: ', merged_raw_df.shape)
+    merged_raw_df.to_csv(cfg['PATHS']['FULL_RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
+    return
 
 
 def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
