@@ -9,7 +9,7 @@ from src.data.preprocess import merge_raw_data, preprocess_new_data
 parser = argparse.ArgumentParser()
 parser.add_argument('--rawdatadir', type=str, help="Water consumption raw data directory")
 parser.add_argument('--rawdataset', type=str, help="Path to saved raw consumption data CSV")
-parser.add_argument('--preprocesseddata', type=str, help="Path to preprocessed data CSV")
+parser.add_argument('--preprocessedoutputdir', type=str, help="intermediate pipeline directory containing preprocessed data")
 args = parser.parse_args()
 run = Run.get_context()
 
@@ -17,7 +17,7 @@ run = Run.get_context()
 cfg = yaml.full_load(open("./config.yml", 'r'))  # Load config data
 cfg['PATHS']['RAW_DATA_DIR'] = args.rawdatadir + '/' + cfg['PATHS']['RAW_DATA'].split('/')[-1]
 cfg['PATHS']['RAW_DATASET'] = args.rawdataset + '/' + cfg['PATHS']['RAW_DATASET'].split('/')[-1]
-cfg['PATHS']['PREPROCESSED_DATA'] = args.preprocesseddata + '/' + cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]
+cfg['PATHS']['PREPROCESSED_DATA'] = args.preprocessedoutputdir + '/' + cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]
 
 # For conveying email errors, if necessary
 error_email_msg = ''

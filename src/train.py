@@ -26,7 +26,7 @@ MODELS_DEFS = {
 }
 
 
-def load_dataset(cfg):
+def load_dataset(cfg, fixed_test_set=False):
     '''
     Load preprocessed dataset and return training and test sets.
     :param cfg: Project config
@@ -41,8 +41,16 @@ def load_dataset(cfg):
     df = df[50:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
 
     # Define training and test sets
-    train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
-    test_df = df[int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0]):]
+    if fixed_test_set:
+        if cfg['DATA']['TEST_DAYS'] <= 0:
+            train_df = df[:int(df.shape[0])]
+            test_df = df[int(df.shape[0]):]
+        else:
+            train_df = df[:int(-cfg['DATA']['TEST_DAYS'])]
+            test_df = df[int(-cfg['DATA']['TEST_DAYS']):]
+    else:
+        train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
+        test_df = df[int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0]):]
     print('Size of training set: ', train_df.shape[0])
     print('Size of test set: ', test_df.shape[0])
     return train_df, test_df
@@ -72,16 +80,19 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
     if save_model:
         model.save(cfg['PATHS']['MODELS'], scaler_dir=cfg['PATHS']['SERIALIZATIONS'])
 
-    # Evaluate the model on the test set
-    save_dir = cfg['PATHS']['EXPERIMENTS'] if save_metrics else None
-    test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=save_dir, plot=save_metrics)
-    if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
-        model.decompose(cfg['PATHS']['INTERPRETABILITY'])
+    # Evaluate the model on the test set, if it exists
+    if test_df.shape[0] > 0:
+        save_dir = cfg['PATHS']['EXPERIMENTS'] if save_metrics else None
+        test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=save_dir, plot=save_metrics)
+        if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
+            model.decompose(cfg['PATHS']['INTERPRETABILITY'])
+    else:
+        test_forecast_metrics = {}
     return test_forecast_metrics
 
 
 
-def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_metrics=False):
+def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_metrics=False, fixed_test_set=False):
     '''
     Train a single model. Use the passed hyperparameters if possible; otherwise, use those in config.
     :param cfg: Project config
@@ -89,9 +100,10 @@ def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_met
     :param save_model: Flag indicating whether to save the model
     :param write_logs: Flag indicating whether to write any training logs to disk
     :param save_metrics: Flag indicating whether to save the forecast metrics to a CSV
+    :param fixed_test_set: Flag indicating whether to use a fixed number of days for test set
     :return: Dictionary of test set forecast metrics
     '''
-    train_df, test_df = load_dataset(cfg)
+    train_df, test_df = load_dataset(cfg, fixed_test_set=fixed_test_set)
     model_def = MODELS_DEFS.get(cfg['TRAIN']['MODEL'].upper(), lambda: "Invalid model specified in cfg['TRAIN']['MODEL']")
     if hparams is None:
         hparams = cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()]
