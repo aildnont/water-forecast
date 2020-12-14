@@ -3,7 +3,7 @@ PATHS:
   RAW_DATA_DIR: 'data/raw/quarterly/'
   RAW_DATASET: 'data/raw/raw_data.csv'
   FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
-  PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
+  PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data_RC_ind.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
@@ -37,10 +37,10 @@ DATA:
 # Training experiments
 TRAIN:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
-  EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
+  EXPERIMENT: 'hparam_search'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
   N_FOLDS: 6
   HPARAM_SEARCH:
-    N_EVALS: 500
+    N_EVALS: 100
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
   INTERPRETABILITY: false

@@ -21,11 +21,12 @@ MODELS_DEFS = {
 }
 
 
-def forecast(days, cfg=None, save=False):
+def forecast(days, cfg=None, model=None, save=False):
     '''
     Generate a forecast for a certain number of days
     :param days: Length of forecast
     :param cfg: Project config
+    :param model: Model object
     :param save: Flag indicating whether to save the forecast
     :return: DataFrame containing predicted consumption for each future date
     '''
@@ -33,11 +34,14 @@ def forecast(days, cfg=None, save=False):
     if cfg is None:
         cfg = yaml.full_load(open(os.getcwd() + "/config.yml", 'r'))
 
-    model_name = cfg['FORECAST']['MODEL'].upper()
-    model_def = MODELS_DEFS.get(model_name, lambda: "Invalid model specified in cfg['FORECAST']['MODEL']")
-    hparams = cfg['HPARAMS'][model_name]
-    model = model_def(hparams)  # Create instance of model
-    model.load(cfg['FORECAST']['MODEL_PATH'], scaler_path=cfg['PATHS']['SERIALIZATIONS'] + 'standard_scaler.joblib')
+    if model is None:
+        model_name = cfg['FORECAST']['MODEL'].upper()
+        model_def = MODELS_DEFS.get(model_name, lambda: "Invalid model specified in cfg['FORECAST']['MODEL']")
+        hparams = cfg['HPARAMS'][model_name]
+        model = model_def(hparams)  # Create instance of model
+        model.load(cfg['FORECAST']['MODEL_PATH'], scaler_path=cfg['PATHS']['SERIALIZATIONS'] + 'standard_scaler.joblib')
+    else:
+        model_name = model.name
     if isinstance(model, (NNModel, SKLearnModel)):
         train_df, test_df = load_dataset(cfg)
         recent_data = model.get_recent_data(train_df)

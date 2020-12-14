@@ -107,10 +107,10 @@ def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_met
     model_def = MODELS_DEFS.get(cfg['TRAIN']['MODEL'].upper(), lambda: "Invalid model specified in cfg['TRAIN']['MODEL']")
     if hparams is None:
         hparams = cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()]
-    test_forecast_metrics = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_model,
+    test_forecast_metrics, model = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_model,
                                         write_logs=write_logs, save_metrics=save_metrics)
     print('Test forecast metrics: ', test_forecast_metrics)
-    return test_forecast_metrics
+    return test_forecast_metrics, model
 
 
 def train_all(cfg, save_models=False, write_logs=False):
@@ -127,7 +127,7 @@ def train_all(cfg, save_models=False, write_logs=False):
         print('*** Training ' + model_name + ' ***\n')
         model_def = MODELS_DEFS[model_name]
         hparams = cfg['HPARAMS'][model_name]
-        test_forecast_metrics = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_models,
+        test_forecast_metrics, _ = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_models,
                                             write_logs=write_logs)
         if all_model_metrics:
             all_model_metrics['model'].append(model_name)
@@ -260,7 +260,7 @@ def bayesian_hparam_optimization(cfg):
         #scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams,
         #                          last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
         #score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
-        test_metrics = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
+        test_metrics, _ = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
         score = test_metrics['MAPE']
         return score   # We aim to minimize error
     search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',

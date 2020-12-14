@@ -6,11 +6,12 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-def load_raw_data(cfg, save_raw_df=False):
+def load_raw_data(cfg, save_raw_df=False, rate_class='all'):
     '''
     Load all entries for water consumption and combine into a single dataframe
     :param cfg: project config
     :param save_raw_df: Flag indicating whether to save the accumulated raw dataset
+    :param rate_class: Rate class to filter raw data by
     :return: a Pandas dataframe containing all water consumption records
     '''
 
@@ -61,6 +62,10 @@ def load_raw_data(cfg, save_raw_df=False):
         raw_df['EST_READ'] = raw_df['EST_READ'].astype('str') + '_'     # Force treatment as string
     raw_df[['CONSUMPTION'] + num_feats + bool_feats] = raw_df[['CONSUMPTION'] + num_feats + bool_feats].fillna(0)
     raw_df[cat_feats] = raw_df[cat_feats].fillna('MISSING')
+
+    # Filter by a rate class if desired
+    if rate_class.upper() in raw_df['RATE_CLASS'].unique().tolist():
+        raw_df = raw_df[raw_df['RATE_CLASS'] == rate_class.upper()]
 
     if save_raw_df:
         raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
@@ -131,18 +136,20 @@ def calculate_ts_data(cfg, raw_df):
     return daily_df
 
 
-def preprocess_new_data(cfg, save_df=True):
+def preprocess_new_data(cfg, save_df=True, rate_class='all'):
     '''
     Preprocess a new raw data file and merge it with preexisting preprocessed data.
     :param cfg: Project config
     :param save_df: Flag indicating whether to save the combined preprocessed dataset
+    :param rate_class: Rate class to filter raw data by
+    :param save_raw_data: Flag indicating whether to save the new raw dataset
     '''
 
     # Load new raw data and remove any rows that appear in old raw data
     old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
     old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
     old_raw_df['END_DATE'] = pd.to_datetime(old_raw_df['END_DATE'], errors='coerce')
-    new_raw_df = load_raw_data(cfg, save_raw_df=False)
+    new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=True)
     if new_raw_df.shape[1] > old_raw_df.shape[1]:
         new_raw_df = new_raw_df[old_raw_df.columns]  # If additional features added, remove them
     recent_old_raw_df = old_raw_df[(old_raw_df['EFFECTIVE_DATE'] > new_raw_df['EFFECTIVE_DATE'].min()) &
