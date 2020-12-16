@@ -50,9 +50,9 @@ for i in range(len(RATE_CLASSES)):
 if len(error_email_msg) > 0:
     error_email_msg = 'Preprocessing step of training pipeline failed. See the below error.\n\n' + error_email_msg
     cfg_private = yaml.full_load(open("./config-private.yml", 'r'))  # Load private config data
-    message = Mail(from_email='COLWaterForecastModelAlerts@no-reply.ca', to_emails=cfg_private['EMAIL']['TO_EMAILS'],
+    message = Mail(from_email='COLWaterForecastModelAlerts@no-reply.ca', to_emails=cfg_private['EMAIL']['TO_EMAILS_ERROR'],
                    subject='Water forecasting training pipeline failed', html_content=error_email_msg)
-    for email_address in cfg_private['EMAIL']['CC_EMAILS']:
+    for email_address in cfg_private['EMAIL']['CC_EMAILS_ERROR']:
         message.add_cc(email_address)
     try:
         sg = SendGridAPIClient(cfg_private['EMAIL']['SENDGRID_API_KEY'])

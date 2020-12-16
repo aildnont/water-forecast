@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-def load_raw_data(cfg, save_raw_df=False, rate_class='all'):
+def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     '''
     Load all entries for water consumption and combine into a single dataframe
     :param cfg: project config
@@ -253,11 +253,12 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
     return client_df
 
 
-def preprocess_ts(cfg=None, save_df=True):
+def preprocess_ts(cfg=None, save_df=True, rate_class='all'):
     '''
     Transform raw water demand data into a time series dataset ready to be fed into a model.
     :param cfg: project config
     :param save_df: Flag indicating whether to save the preprocessed data
+    :param rate_class: Rate class to filter by
     '''
 
     run_start = datetime.today()
@@ -265,7 +266,7 @@ def preprocess_ts(cfg=None, save_df=True):
     if cfg is None:
         cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
 
-    raw_df = load_raw_data(cfg)
+    raw_df = load_raw_data(cfg, rate_class=rate_class)
     daily_df = calculate_ts_data(cfg, raw_df)
     if save_df:
         daily_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)

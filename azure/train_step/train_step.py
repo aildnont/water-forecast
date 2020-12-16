@@ -4,6 +4,8 @@ import yaml
 import shutil
 import datetime
 from azureml.core import Run
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from src.train import *
 from src.predict import *
 
@@ -68,5 +70,18 @@ for rate_class in RATE_CLASSES:
 
     # Produce a water consumption forecast and save it
     forecast(args.forecastdays, model, save=True)
+
+    # Send an email to AI manager indicating completion of training
+    email_content = 'Hello,\n\nThe water demand forecasting model has successfully trained.'
+    cfg_private = yaml.full_load(open("./config-private.yml", 'r'))  # Load private config data
+    message = Mail(from_email='COLWaterForecastModelAlerts@no-reply.ca', to_emails=cfg_private['EMAIL']['TO_EMAILS_COMPLETION'],
+                   subject='Water demand forecasting training pipeline complete', html_content=email_content)
+    for email_address in cfg_private['EMAIL']['CC_EMAILS_COMPLETION']:
+        message.add_cc(email_address)
+    try:
+        sg = SendGridAPIClient(cfg_private['EMAIL']['SENDGRID_API_KEY'])
+        response = sg.send(message)
+    except Exception as e:
+        print('Could not send email indicating training completion. Encountered the following error:\n\n', e)
 
 
