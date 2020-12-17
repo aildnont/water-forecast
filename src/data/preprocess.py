@@ -275,4 +275,4 @@ def preprocess_ts(cfg=None, save_df=True, rate_class='all'):
     return daily_df
 
 if __name__ == '__main__':
-    df = preprocess_ts()
+    df = preprocess_ts(rate_class='all')
