@@ -1,5 +1,4 @@
-data/
-processed/
+preprocessed/
 raw/
 serializations/
 img/
