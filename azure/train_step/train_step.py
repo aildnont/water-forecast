@@ -12,8 +12,8 @@ from src.predict import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--trainoutputdir', type=str, help="directory for pipeline outputs")
 parser.add_argument('--preprocesseddatadir', type=str, help="Directory containing preprocessed data for each rate class")
-parser.add_argument('--testdays', type=str, help="Number of days in test set, for model evaluation")
-parser.add_argument('--forecastdays', type=str, help="Number of days to produce future forecast for")
+TEST_DAYS = os.getenv("AML_PARAMETER_TEST_DAYS")            # Number of days in test set, for model evaluation
+FORECAST_DAYS = os.getenv("AML_PARAMETER_FORECAST_DAYS")    # Number of days to produce future forecast for
 args = parser.parse_args()
 cur_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 run = Run.get_context()
@@ -57,7 +57,7 @@ for rate_class in RATE_CLASSES:
     shutil.move(cfg['PATHS']['PREPROCESSED_DATA'], rc_destination_dir)
 
     # Train a model, using a fixed size test set and save the metrics, along with test set forecast visualization
-    cfg['DATA']['TEST_DAYS'] = args.testdays      # Test set is half a year
+    cfg['DATA']['TEST_DAYS'] = TEST_DAYS      # Test set is half a year
     test_forecast_metrics, _ = train_single(cfg, save_model=True, save_metrics=True, fixed_test_set=True)
 
     # Record test forecast metrics
@@ -69,7 +69,7 @@ for rate_class in RATE_CLASSES:
     _, model = train_single(cfg, save_model=True, save_metrics=False, fixed_test_set=True)
 
     # Produce a water consumption forecast and save it
-    forecast(args.forecastdays, model, save=True)
+    forecast(FORECAST_DAYS, model, save=True)
 
     # Send an email to AI manager indicating completion of training
     email_content = 'Hello,\n\nThe water demand forecasting model has successfully trained.'
