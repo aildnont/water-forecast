@@ -132,7 +132,7 @@ class ProphetModel(ModelStrategy):
             json.dump(self.model.seasonalities['weekly'], fp)
         with open(results_dir + 'yearly_component.json', 'w') as fp:
             json.dump(self.model.seasonalities['yearly'], fp)
-        plot_prophet_components(self.model, self.future_prediction)
+        plot_prophet_components(self.model, self.future_prediction, save_dir=save_dir)
 
 
 

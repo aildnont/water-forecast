@@ -10,3 +10,4 @@ LICENCE
 README.md
 .gitignore
 *.ipynb
+!config-private.yml

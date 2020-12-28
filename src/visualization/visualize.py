@@ -275,7 +275,7 @@ def plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
 
 
-def plot_prophet_components(prophet_model, forecast):
+def plot_prophet_components(prophet_model, forecast, save_dir=None):
     '''
     Plot Prophet model's forecast components. This plot visualizes trend, yearly seasonality, weekly seasonality,
     holiday effects
@@ -286,6 +286,7 @@ def plot_prophet_components(prophet_model, forecast):
     fig = prophet_model.plot_components(forecast)
     fig.suptitle('Prophet Model Components', fontsize=15)
     fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
-    plt.savefig(cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] + 'Prophet_components' +
+    save_dir = cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] if save_dir is None else save_dir
+    plt.savefig(save_dir + 'Prophet_components' +
                 datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return

@@ -88,7 +88,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
             model.decompose(cfg['PATHS']['INTERPRETABILITY'])
     else:
         test_forecast_metrics = {}
-    return test_forecast_metrics
+    return test_forecast_metrics, model
 
 
 

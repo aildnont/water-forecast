@@ -64,8 +64,9 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     raw_df[cat_feats] = raw_df[cat_feats].fillna('MISSING')
 
     # Filter by a rate class if desired
-    if rate_class.upper() in raw_df['RATE_CLASS'].unique().tolist():
-        raw_df = raw_df[raw_df['RATE_CLASS'] == rate_class.upper()]
+    rate_class_str = 'W&S_' + rate_class.upper()
+    if rate_class_str in raw_df['RATE_CLASS'].unique().tolist():
+        raw_df = raw_df[raw_df['RATE_CLASS'] == rate_class_str]
 
     if save_raw_df:
         raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
@@ -136,20 +137,24 @@ def calculate_ts_data(cfg, raw_df):
     return daily_df
 
 
-def preprocess_new_data(cfg, save_df=True, rate_class='all'):
+def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None):
     '''
     Preprocess a new raw data file and merge it with preexisting preprocessed data.
     :param cfg: Project config
     :param save_df: Flag indicating whether to save the combined preprocessed dataset
     :param rate_class: Rate class to filter raw data by
-    :param save_raw_data: Flag indicating whether to save the new raw dataset
+    :param out_path: Path to save updated preprocessed data
     '''
 
     # Load new raw data and remove any rows that appear in old raw data
     old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
     old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
     old_raw_df['END_DATE'] = pd.to_datetime(old_raw_df['END_DATE'], errors='coerce')
-    new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=True)
+    new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=False)
+    if save_raw_df:
+        raw_df = pd.concat([old_raw_df, new_raw_df], axis=0, ignore_index=True).drop_duplicates(keep=False)
+        raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
+    
     if new_raw_df.shape[1] > old_raw_df.shape[1]:
         new_raw_df = new_raw_df[old_raw_df.columns]  # If additional features added, remove them
     recent_old_raw_df = old_raw_df[(old_raw_df['EFFECTIVE_DATE'] > new_raw_df['EFFECTIVE_DATE'].min()) &
@@ -171,8 +176,9 @@ def preprocess_new_data(cfg, save_df=True, rate_class='all'):
 
     # Combine old and new preprocessed data and update saved preprocessed data if specified
     preprocessed_df = pd.concat([old_preprocessed_df, new_df_nonoverlap], axis=0)
-    if save_df:
-        preprocessed_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
+    if save_prepr_df:
+        out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
+        preprocessed_df.to_csv(out_path, sep=',', header=True)
     return preprocessed_df
 
 
