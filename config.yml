@@ -1,6 +1,6 @@
 # Relevant file/directory paths
 PATHS:
-  RAW_DATA_DIR: 'data/raw/new/'
+  RAW_DATA_DIR: 'data/raw/quarterly/'
   RAW_DATASET: 'data/raw/intermediate/all/raw_data.csv'
   FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
   PREPROCESSED_DATA: 'data/preprocessed/all/preprocessed_data.csv'

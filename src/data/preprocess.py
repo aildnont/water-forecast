@@ -21,9 +21,14 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     feat_names = ['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats
     raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
     raw_cons_dfs = []
+    rate_class_str = 'W&S_' + rate_class.upper()
     print('Loading raw data from spreadsheets.')
     for filename in tqdm(raw_data_filenames):
         df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
+
+        if rate_class_str in df['RATE_CLASS'].unique().tolist():
+            df = df[df['RATE_CLASS'] == rate_class_str]         # Filter by a rate class if desired
+
         for f in df.columns:
             if ' 'in f or '"' in f:
                 df.rename(columns={f: f.replace(' ', '').replace('"', '')}, inplace=True)
@@ -63,28 +68,28 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     raw_df[['CONSUMPTION'] + num_feats + bool_feats] = raw_df[['CONSUMPTION'] + num_feats + bool_feats].fillna(0)
     raw_df[cat_feats] = raw_df[cat_feats].fillna('MISSING')
 
-    # Filter by a rate class if desired
-    rate_class_str = 'W&S_' + rate_class.upper()
-    if rate_class_str in raw_df['RATE_CLASS'].unique().tolist():
-        raw_df = raw_df[raw_df['RATE_CLASS'] == rate_class_str]
-
     if save_raw_df:
         raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
     return raw_df
 
 
-def calculate_ts_data(cfg, raw_df):
+def calculate_ts_data(cfg, raw_df, start_date=None):
     '''
     Calculates estimates for daily water consumption based on provided historical data. Assumes each client consumes
     water at a uniform rate over the billing period. Produces a time series dataset indexed by date.
     at a uniform rate by each
     :param cfg: project config
+    :param raw_df: A DataFrame containing raw water consumption data
+    :param start_date: The minimum date at which at which to create daily estimates for
     :return: a Pandas dataframe containing estimated daily water consumption
     '''
 
     print('Calculating estimates for daily consumption and contextual features.')
     raw_df.drop('CONTRACT_ACCOUNT', axis=1, inplace=True)
-    min_date = raw_df['EFFECTIVE_DATE'].min()
+    if start_date is None:
+        min_date = raw_df['EFFECTIVE_DATE'].min()
+    else:
+        min_date = start_date
     max_date = raw_df['END_DATE'].max() - timedelta(days=1)
 
     cat_feats = cfg['DATA']['CATEGORICAL_FEATS']
@@ -149,33 +154,24 @@ def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='a
     # Load new raw data and remove any rows that appear in old raw data
     old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
     old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
-    old_raw_df['END_DATE'] = pd.to_datetime(old_raw_df['END_DATE'], errors='coerce')
-    new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=False)
-    if save_raw_df:
-        raw_df = pd.concat([old_raw_df, new_raw_df], axis=0, ignore_index=True).drop_duplicates(keep=False)
-        raw_df.to_csv(cfg['PATHS']['RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
+    min_preprocess_date = old_raw_df['EFFECTIVE_DATE'].max() - timedelta(days=183)  # Latest date in old raw dataset minus 1/2 year, to be safe
+    new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
     
     if new_raw_df.shape[1] > old_raw_df.shape[1]:
         new_raw_df = new_raw_df[old_raw_df.columns]  # If additional features added, remove them
-    recent_old_raw_df = old_raw_df[(old_raw_df['EFFECTIVE_DATE'] > new_raw_df['EFFECTIVE_DATE'].min()) &
-        (old_raw_df['END_DATE'] > new_raw_df['END_DATE'].min())]
-    new_raw_df = pd.concat([recent_old_raw_df, recent_old_raw_df, new_raw_df], axis=0, ignore_index=True)\
-        .drop_duplicates(keep=False)  # Keep all rows of the new raw data that don't appear in the old one
+
+    # Preprocess new raw data
+    new_preprocessed_df = calculate_ts_data(cfg, new_raw_df, start_date=min_preprocess_date)
 
     # Load old preprocessed data
     old_preprocessed_df = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
     old_preprocessed_df['Date'] = pd.to_datetime(old_preprocessed_df['Date'], errors='coerce')
+    old_preprocessed_df = old_preprocessed_df[old_preprocessed_df['Date'] < min_preprocess_date]
     old_preprocessed_df.set_index('Date', inplace=True)
 
-    # Preprocess new raw data
-    new_preprocessed_df = calculate_ts_data(cfg, new_raw_df)
+    # Combine old and new preprocessed data
+    preprocessed_df = pd.concat([old_preprocessed_df, new_preprocessed_df], axis=0)
 
-    # Get rows in new preprocessed data that don't exist in old preprocessed data
-    overlapping_dates = pd.merge(old_preprocessed_df, new_preprocessed_df, how='inner', on='Date').index
-    new_df_nonoverlap = new_preprocessed_df[~new_preprocessed_df.index.isin(overlapping_dates)]
-
-    # Combine old and new preprocessed data and update saved preprocessed data if specified
-    preprocessed_df = pd.concat([old_preprocessed_df, new_df_nonoverlap], axis=0)
     if save_prepr_df:
         out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
         preprocessed_df.to_csv(out_path, sep=',', header=True)
@@ -272,7 +268,7 @@ def preprocess_ts(cfg=None, save_df=True, rate_class='all'):
     if cfg is None:
         cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
 
-    raw_df = load_raw_data(cfg, rate_class=rate_class)
+    raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=True)
     daily_df = calculate_ts_data(cfg, raw_df)
     if save_df:
         daily_df.to_csv(cfg['PATHS']['PREPROCESSED_DATA'], sep=',', header=True)
@@ -282,3 +278,5 @@ def preprocess_ts(cfg=None, save_df=True, rate_class='all'):
 
 if __name__ == '__main__':
     df = preprocess_ts(rate_class='all')
+    #cfg = yaml.full_load(open("./config.yml", 'r'))
+    #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='ind')
