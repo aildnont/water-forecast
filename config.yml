@@ -37,13 +37,13 @@ DATA:
 # Training experiments
 TRAIN:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
-  EXPERIMENT: 'hparam_search'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
+  EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
   N_FOLDS: 6
   HPARAM_SEARCH:
     N_EVALS: 100
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
-  INTERPRETABILITY: false
+  INTERPRETABILITY: true
 
 # Forecasting
 FORECAST:
@@ -59,7 +59,7 @@ HPARAMS:
     SEASONALITY_PRIOR_SCALE: 0.019907
     HOLIDAYS_PRIOR_SCALE: 1.23784
     SEASONALITY_MODE: 'additive'
-    CHANGEPOINT_RANGE: 0.8
+    CHANGEPOINT_RANGE: 0.95
     HOLIDAYS:
       Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
                     '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',

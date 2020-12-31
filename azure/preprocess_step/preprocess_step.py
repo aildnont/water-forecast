@@ -42,10 +42,6 @@ for i in range(len(RATE_CLASSES)):
                                         + cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]
     preprocessed_output_dir = args.preprocessedintermediatedir + '/' + RATE_CLASSES[i].lower() + '/'
     preprocessed_output_path = preprocessed_output_dir + cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]
-    print(args.preprocessedintermediatedir)
-    print(preprocessed_output_path)
-    print(cfg['PATHS']['RAW_DATASET'])
-    print(cfg['PATHS']['PREPROCESSED_DATA'])
     if not os.path.exists(preprocessed_output_dir):
         os.makedirs(preprocessed_output_dir)  # Create a folder in intermediate storage
 

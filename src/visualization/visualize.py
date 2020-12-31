@@ -44,7 +44,7 @@ def visualize_silhouette_plot(k_range, silhouette_scores, optimal_k, save_fig=Fa
     return
 
 
-def plot_model_evaluation(forecast_df, model_name, metrics, figsize=(20,13), save_fig=False):
+def plot_model_evaluation(forecast_df, model_name, metrics, save_dir=None, figsize=(20,13), save_fig=False):
     '''
     Plot model's predictions on training and test sets, along with key performance metrics.
     :param forecast_df: DataFrame consisting of predicted and ground truth consumption values
@@ -90,7 +90,8 @@ def plot_model_evaluation(forecast_df, model_name, metrics, figsize=(20,13), sav
           " | rmse:", np.round(metrics['RMSE']))
 
     if save_fig:
-        plt.savefig(cfg['PATHS']['FORECAST_VISUALIZATIONS'] + model_name + '_forecast_' +
+        save_dir = cfg['PATHS']['FORECAST_VISUALIZATIONS'] if save_dir is None else save_dir
+        plt.savefig(save_dir + '/' + model_name + '_forecast_' +
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return
 

@@ -121,7 +121,7 @@ class ProphetModel(ModelStrategy):
 
         if not (self.model or self.future_prediction):
             return
-        results_dir = save_dir + 'Prophet_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/'
+        results_dir = save_dir + '/Prophet_components/'
         try:
             os.mkdir(results_dir)
         except OSError:

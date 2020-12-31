@@ -2,7 +2,6 @@ import os
 import argparse
 import yaml
 import shutil
-import datetime
 from azureml.core import Run
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -16,11 +15,10 @@ parser.add_argument('--preprocessedoutputdir', type=str, help="Directory to save
 TEST_DAYS = int(os.getenv("AML_PARAMETER_TEST_DAYS"))            # Number of days in test set, for model evaluation
 FORECAST_DAYS = int(os.getenv("AML_PARAMETER_FORECAST_DAYS"))    # Number of days to produce future forecast for
 args = parser.parse_args()
-cur_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 run = Run.get_context()
 
 # All outputs from this run will be in the same directory
-DESTINATION_DIR = args.trainoutputdir + cur_date + '/'
+DESTINATION_DIR = args.trainoutputdir
 if not os.path.exists(DESTINATION_DIR):
     os.makedirs(DESTINATION_DIR)
 
@@ -66,7 +64,7 @@ for rate_class in RATE_CLASSES:
     _, model = train_single(cfg, save_model=True, save_metrics=False, fixed_test_set=True)
 
     # Produce a water consumption forecast and save it
-    forecast(FORECAST_DAYS, model, save=True)
+    forecast(FORECAST_DAYS, cfg=cfg, model=model, save=True)
     
     # Keep a copy of preprocessed data in persistent blob storage for this run and update the historical preprocessed dataset for this rate class
     shutil.copy(cfg['PATHS']['PREPROCESSED_DATA'], rc_preprocessed_dir)
