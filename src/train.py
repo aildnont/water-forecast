@@ -84,10 +84,12 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
     if test_df.shape[0] > 0:
         save_dir = cfg['PATHS']['EXPERIMENTS'] if save_metrics else None
         test_forecast_metrics = model.evaluate(train_df, test_df, save_dir=save_dir, plot=save_metrics)
-        if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
-            model.decompose(cfg['PATHS']['INTERPRETABILITY'])
     else:
         test_forecast_metrics = {}
+        
+    # If we are training a Prophet model, decompose it and save the components' parameters and visualization
+    if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
+        model.decompose(cfg['PATHS']['INTERPRETABILITY'])
     return test_forecast_metrics, model
 
 

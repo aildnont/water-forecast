@@ -23,6 +23,7 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     raw_cons_dfs = []
     rate_class_str = 'W&S_' + rate_class.upper()
     print('Loading raw data from spreadsheets.')
+    raw_df = pd.DataFrame()
     for filename in tqdm(raw_data_filenames):
         df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
 
@@ -46,16 +47,13 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
                 except Exception as e:
                     print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
-        raw_cons_dfs.append(df) # Add to list of DFs
-    raw_df = pd.concat(raw_cons_dfs, axis=0, ignore_index=True)     # Concatenate all water demand data
-    print(raw_df.shape)
-
-    print('Dropping duplicate rows.')
-    raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)   # Drop duplicate entries appearing in different data slices
+        df['EFFECTIVE_DATE'] = pd.to_datetime(df['EFFECTIVE_DATE'], errors='coerce')
+        df['END_DATE'] = pd.to_datetime(df['END_DATE'], errors='coerce')
+        raw_df = pd.concat([raw_df, df], axis=0, ignore_index=True)     # Concatenate next batch of data
+        raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)   # Drop duplicate entries appearing in different data slices
+    
     print('Consumption total: ', raw_df['CONSUMPTION'].sum())
     print(raw_df.shape)
-    raw_df['EFFECTIVE_DATE'] = pd.to_datetime(raw_df['EFFECTIVE_DATE'], errors='coerce')
-    raw_df['END_DATE'] = pd.to_datetime(raw_df['END_DATE'], errors='coerce')
 
     # Replace X's representing true for boolean feats with 1
     print('Cleaning data.')
@@ -192,12 +190,16 @@ def merge_raw_data(cfg=None):
     merged_raw_df = pd.DataFrame()
     if os.path.exists(cfg['PATHS']['FULL_RAW_DATASET']):
         merged_raw_df = pd.read_csv(cfg['PATHS']['FULL_RAW_DATASET'], encoding='ISO-8859-1', low_memory=False)
+        merged_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(merged_raw_df['EFFECTIVE_DATE'], errors='coerce')
+        merged_raw_df['END_DATE'] = pd.to_datetime(merged_raw_df['END_DATE'], errors='coerce')
     print('Shape of preexisting merged raw data: ', merged_raw_df.shape)
         
     # Loop through all raw data files and concatenate them with the old merged one, de-duplicating rows as needed
     quarterly_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
     for filename in tqdm(quarterly_raw_data_filenames):
         quarterly_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
+        quarterly_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(quarterly_raw_df['EFFECTIVE_DATE'], errors='coerce')
+        quarterly_raw_df['END_DATE'] = pd.to_datetime(quarterly_raw_df['END_DATE'], errors='coerce')
         merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True) 
         merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
     print('Shape of new merged raw data: ', merged_raw_df.shape)

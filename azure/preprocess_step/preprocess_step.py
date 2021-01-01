@@ -29,6 +29,7 @@ try:
     merge_raw_data(cfg)
 except:
     error_email_msg += 'Error encountered in merging raw data:\n' + traceback.format_exc() + '\n\n'
+    raise Exception(error_email_msg)
 
 # Run preprocessing for all rate classes in the below list
 RATE_CLASSES = ['all', 'RESI', 'COMM', 'IND', 'INS']
