@@ -20,7 +20,6 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     bool_feats = cfg['DATA']['BOOLEAN_FEATS']
     feat_names = ['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE', 'CONSUMPTION'] + num_feats + bool_feats + cat_feats
     raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
-    raw_cons_dfs = []
     rate_class_str = 'W&S_' + rate_class.upper()
     print('Loading raw data from spreadsheets.')
     raw_df = pd.DataFrame()
@@ -190,17 +189,13 @@ def merge_raw_data(cfg=None):
     merged_raw_df = pd.DataFrame()
     if os.path.exists(cfg['PATHS']['FULL_RAW_DATASET']):
         merged_raw_df = pd.read_csv(cfg['PATHS']['FULL_RAW_DATASET'], encoding='ISO-8859-1', low_memory=False)
-        merged_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(merged_raw_df['EFFECTIVE_DATE'], errors='coerce')
-        merged_raw_df['END_DATE'] = pd.to_datetime(merged_raw_df['END_DATE'], errors='coerce')
     print('Shape of preexisting merged raw data: ', merged_raw_df.shape)
         
     # Loop through all raw data files and concatenate them with the old merged one, de-duplicating rows as needed
     quarterly_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
     for filename in tqdm(quarterly_raw_data_filenames):
         quarterly_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
-        quarterly_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(quarterly_raw_df['EFFECTIVE_DATE'], errors='coerce')
-        quarterly_raw_df['END_DATE'] = pd.to_datetime(quarterly_raw_df['END_DATE'], errors='coerce')
-        merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True) 
+        merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True)
         merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
     print('Shape of new merged raw data: ', merged_raw_df.shape)
 
@@ -281,6 +276,7 @@ def preprocess_ts(cfg=None, save_df=True, rate_class='all'):
     return daily_df
 
 if __name__ == '__main__':
-    df = preprocess_ts(rate_class='all')
-    #cfg = yaml.full_load(open("./config.yml", 'r'))
+    #df = preprocess_ts(rate_class='all')
+    cfg = yaml.full_load(open("./config.yml", 'r'))
     #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='ind')
+    merge_raw_data(cfg)
