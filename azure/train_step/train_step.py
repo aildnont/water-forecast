@@ -35,6 +35,12 @@ for rate_class in RATE_CLASSES:
     rc_destination_dir = DESTINATION_DIR + rate_class.lower() + '/'
     if not os.path.exists(rc_destination_dir):
         os.makedirs(rc_destination_dir)
+    rc_destination_eval_model_dir = rc_destination_dir + 'eval_model/'
+    if not os.path.exists(rc_destination_eval_model_dir):
+        os.makedirs(rc_destination_eval_model_dir)
+    rc_destination_final_model_dir = rc_destination_dir + 'final_model/'
+    if not os.path.exists(rc_destination_final_model_dir):
+        os.makedirs(rc_destination_final_model_dir)
     rc_preprocessed_dir = PREPROCESSED_OUTPUT_DIR + rate_class.lower() + '/'
     if not os.path.exists(rc_preprocessed_dir):
         os.makedirs(rc_preprocessed_dir)
@@ -42,25 +48,35 @@ for rate_class in RATE_CLASSES:
     # Get relevant paths on Azure blob storage. Create new folders as necessary.
     cfg = yaml.full_load(open("./config.yml", 'r'))
     cfg['PATHS']['PREPROCESSED_DATA'] = args.preprocessedintermediatedir + '/' + rate_class.lower() + '/' + cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]
-    cfg['PATHS']['MODELS'] = rc_destination_dir
-    cfg['PATHS']['SERIALIZATIONS'] = rc_destination_dir
-    cfg['PATHS']['EXPERIMENTS'] = rc_destination_dir
-    cfg['PATHS']['FORECAST_VISUALIZATIONS'] = rc_destination_dir
-    cfg['PATHS']['LOGS'] = rc_destination_dir
-    cfg['PATHS']['PREDICTIONS']= rc_destination_dir
-    cfg['PATHS']['INTERPRETABILITY'] = rc_destination_dir
+    cfg['PATHS']['MODELS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['SERIALIZATIONS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['EXPERIMENTS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['FORECAST_VISUALIZATIONS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['LOGS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['PREDICTIONS'] = rc_destination_eval_model_dir
+    cfg['PATHS']['INTERPRETABILITY'] = rc_destination_eval_model_dir
 
     # Train a model, using a fixed size test set and save the metrics, along with test set forecast visualization
     cfg['DATA']['TEST_DAYS'] = TEST_DAYS      # Test set is half a year
-    cfg['TRAIN']['INTERPRETABILITY'] = True   # Ensure model components are saved
+    cfg['TRAIN']['INTERPRETABILITY'] = False   
     test_forecast_metrics, _ = train_single(cfg, save_model=True, save_metrics=True, fixed_test_set=True)
 
     # Record test forecast metrics
     for metric in test_forecast_metrics:
         run.log(rate_class + '_test_' + metric, test_forecast_metrics[metric])
+        
+    # Update paths to final model directory
+    cfg['PATHS']['MODELS'] = rc_destination_final_model_dir
+    cfg['PATHS']['SERIALIZATIONS'] = rc_destination_final_model_dir
+    cfg['PATHS']['EXPERIMENTS'] = rc_destination_final_model_dir
+    cfg['PATHS']['FORECAST_VISUALIZATIONS'] = rc_destination_final_model_dir
+    cfg['PATHS']['LOGS'] = rc_destination_final_model_dir
+    cfg['PATHS']['PREDICTIONS'] = rc_destination_final_model_dir
+    cfg['PATHS']['INTERPRETABILITY'] = rc_destination_final_model_dir
 
     # Train a model using all available data
     cfg['DATA']['TEST_DAYS'] = 0
+    cfg['TRAIN']['INTERPRETABILITY'] = True   # Ensure model components are saved
     _, model = train_single(cfg, save_model=True, save_metrics=False, fixed_test_set=True)
 
     # Produce a water consumption forecast and save it

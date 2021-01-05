@@ -91,7 +91,7 @@ def plot_model_evaluation(forecast_df, model_name, metrics, save_dir=None, figsi
 
     if save_fig:
         save_dir = cfg['PATHS']['FORECAST_VISUALIZATIONS'] if save_dir is None else save_dir
-        plt.savefig(save_dir + '/' + model_name + '_forecast_' +
+        plt.savefig(save_dir + '/' + model_name + '_eval_' +
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return
 
