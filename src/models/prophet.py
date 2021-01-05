@@ -5,7 +5,7 @@ import os
 import json
 import datetime
 from src.models.model import ModelStrategy
-from src.visualization.visualize import plot_prophet_components
+from src.visualization.visualize import plot_prophet_components, plot_prophet_forecast
 
 class ProphetModel(ModelStrategy):
     '''
@@ -72,6 +72,7 @@ class ProphetModel(ModelStrategy):
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
         test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
+        plot_prophet_forecast(self.model, self.future_prediction)
         return test_metrics
 
 
@@ -112,16 +113,19 @@ class ProphetModel(ModelStrategy):
         return
 
 
-    def decompose(self, save_dir):
+    def decompose(self, components_save_dir, img_save_dir):
         '''
         Decompose model into its trend, holiday, weekly and yearly components. Generate a plot and save parameters.
         Creates a new directory within save_dir to capture all components of the model in separate files.
         :param save_dir: Directory in which to save the results
         '''
 
-        if not (self.model or self.future_prediction):
+        if not self.model:
             return
-        results_dir = save_dir + '/Prophet_components/'
+        if not self.future_prediction:
+            df_prophet = self.model.make_future_dataframe(periods=0, include_history=True, freq='D') # Training set only
+            self.future_prediction = self.model.predict(df_prophet)
+        results_dir = components_save_dir + '/Prophet_components' + self.train_date + '/'
         try:
             os.mkdir(results_dir)
         except OSError:
@@ -132,7 +136,7 @@ class ProphetModel(ModelStrategy):
             json.dump(self.model.seasonalities['weekly'], fp)
         with open(results_dir + 'yearly_component.json', 'w') as fp:
             json.dump(self.model.seasonalities['yearly'], fp)
-        plot_prophet_components(self.model, self.future_prediction, save_dir=save_dir)
+        plot_prophet_components(self.model, self.future_prediction, save_dir=img_save_dir)
 
 
 

@@ -55,6 +55,7 @@ for rate_class in RATE_CLASSES:
     cfg['PATHS']['LOGS'] = rc_destination_eval_model_dir
     cfg['PATHS']['PREDICTIONS'] = rc_destination_eval_model_dir
     cfg['PATHS']['INTERPRETABILITY'] = rc_destination_eval_model_dir
+    cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] = rc_destination_eval_model_dir
 
     # Train a model, using a fixed size test set and save the metrics, along with test set forecast visualization
     cfg['DATA']['TEST_DAYS'] = TEST_DAYS      # Test set is half a year
@@ -73,6 +74,7 @@ for rate_class in RATE_CLASSES:
     cfg['PATHS']['LOGS'] = rc_destination_final_model_dir
     cfg['PATHS']['PREDICTIONS'] = rc_destination_final_model_dir
     cfg['PATHS']['INTERPRETABILITY'] = rc_destination_final_model_dir
+    cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] = rc_destination_final_model_dir
 
     # Train a model using all available data
     cfg['DATA']['TEST_DAYS'] = 0

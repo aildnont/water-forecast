@@ -38,7 +38,6 @@ def load_dataset(cfg, fixed_test_set=False):
         print("No file found at " + cfg['PATHS']['PREPROCESSED_DATA'] + ". Running preprocessing of client data.")
         df = preprocess_ts(cfg, save_df=False)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df[50:-50]  # For now, take off dates at start and end due to incomplete data at boundaries
 
     # Define training and test sets
     if fixed_test_set:
@@ -89,7 +88,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         
     # If we are training a Prophet model, decompose it and save the components' parameters and visualization
     if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
-        model.decompose(cfg['PATHS']['INTERPRETABILITY'])
+        model.decompose(cfg['PATHS']['INTERPRETABILITY'], cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'])
     return test_forecast_metrics, model
 
 
@@ -163,7 +162,6 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
     if dataset is None:
         dataset = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
         dataset['Date'] = pd.to_datetime(dataset['Date'])
-        dataset = dataset[50:-50]  # TODO: Update this!
     if last_folds is None:
         last_folds = n_folds
     if metrics is None:
@@ -227,7 +225,6 @@ def bayesian_hparam_optimization(cfg):
 
     dataset = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
     dataset['Date'] = pd.to_datetime(dataset['Date'])
-    dataset = dataset[50:-50]  # TODO: Update this!
 
     model_name = cfg['TRAIN']['MODEL'].upper()
     objective_metric = cfg['TRAIN']['HPARAM_SEARCH']['HPARAM_OBJECTIVE']
@@ -306,7 +303,7 @@ def train_experiment(cfg=None, experiment='single_train', save_model=False, writ
 
     # Conduct the desired train experiment
     if experiment == 'train_single':
-        train_single(cfg, save_model=save_model, save_metrics=True)
+        train_single(cfg, save_model=save_model, save_metrics=True, fixed_test_set=False)
     elif experiment == 'train_all':
         train_all(cfg, save_models=save_model)
     elif experiment == 'hparam_search':

@@ -8,6 +8,7 @@ import yaml
 import math
 import os
 from skopt.plots import plot_objective
+from fbprophet.plot import add_changepoints_to_plot
 
 # Set some matplotlib parameters
 mpl.rcParams['figure.figsize'] = (20, 15)
@@ -289,5 +290,26 @@ def plot_prophet_components(prophet_model, forecast, save_dir=None):
     fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
     save_dir = cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] if save_dir is None else save_dir
     plt.savefig(save_dir + 'Prophet_components' +
+                datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+    return
+
+
+def plot_prophet_forecast(prophet_model, prophet_pred, save_dir=None):
+    '''
+    Plot Prophet model's forecast using the Prophet API, including changepoints
+    :param prophet_model: Fitted Prophet model
+    :param prophet_pred: A forecast from a Prophet model (result of a prophet.predict() call)
+    '''
+
+    fig = prophet_model.plot(prophet_pred)
+    ax = fig.gca()
+    add_changepoints_to_plot(ax, prophet_model, prophet_pred)
+    ax = fig.gca()
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Consumption [m^3]')
+    fig.suptitle('Prophet Model Forecast', fontsize=15)
+    fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
+    save_dir = cfg['PATHS']['FORECAST_VISUALIZATIONS'] if save_dir is None else save_dir
+    plt.savefig(save_dir + 'Prophet_API_forecast' +
                 datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
     return

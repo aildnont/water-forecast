@@ -136,6 +136,13 @@ def calculate_ts_data(cfg, raw_df, start_date=None):
         except Exception as e:
             print(date, e)
             daily_df.loc[date, 'Consumption'] = 0.0
+
+    # TODO delete once we have no missing data
+    for missing_range_endpts in cfg['DATA']['MISSING_RANGES']:
+        missing_range = pd.date_range(pd.to_datetime(missing_range_endpts[0]), pd.to_datetime(missing_range_endpts[1]))
+        daily_df = daily_df[~daily_df.index.isin(missing_range)] # Remove noise from missing date ranges
+    daily_df = daily_df[cfg['DATA']['START_TRIM']:-cfg['DATA']['END_TRIM']]
+
     return daily_df
 
 
@@ -280,5 +287,5 @@ def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='al
 if __name__ == '__main__':
     df = preprocess_ts(rate_class='all')
     #cfg = yaml.full_load(open("./config.yml", 'r'))
-    #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='ind')
+    #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)

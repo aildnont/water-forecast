@@ -49,8 +49,8 @@ def forecast(days, cfg=None, model=None, save=False):
         recent_data = None
     results = model.forecast(days, recent_data=recent_data)
     if save:
-        results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(days) +
-                       datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + 'd_' + '.csv',
+        results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(days) + 'd_' +
+                       datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.csv',
                        index=False, index_label=False)
     return results
 
