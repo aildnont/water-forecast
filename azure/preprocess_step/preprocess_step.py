@@ -5,7 +5,7 @@ import traceback
 from azureml.core import Run
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
-from src.data.preprocess import merge_raw_data, preprocess_new_data
+from src.data.preprocess import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--newrawdatadir', type=str, help="Directory containing new raw datasets")
@@ -52,7 +52,7 @@ for i in range(len(RATE_CLASSES)):
         if PREPROCESS_STRATEGY == 'quick':
             preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class=RATE_CLASSES[i], out_path=preprocessed_output_path)
         else:
-            preprocess_ts(cfg=cfg, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=preprocessed_output_path)
+            preprocess_ts(cfg=cfg, save_raw_df=True, save_prepr_df=True, rate_class=RATE_CLASSES[i], out_path=preprocessed_output_path)
     except:
         error_email_msg += 'Error encountered in preprocessing new raw data:\n' + traceback.format_exc() + '\n\n'
 

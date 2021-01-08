@@ -59,7 +59,7 @@ for rate_class in RATE_CLASSES:
 
     # Train a model, using a fixed size test set and save the metrics, along with test set forecast visualization
     cfg['DATA']['TEST_DAYS'] = TEST_DAYS      # Test set is half a year
-    cfg['TRAIN']['INTERPRETABILITY'] = False   
+    cfg['TRAIN']['INTERPRETABILITY'] = True   
     test_forecast_metrics, _ = train_single(cfg, save_model=True, save_metrics=True, fixed_test_set=True)
 
     # Record test forecast metrics

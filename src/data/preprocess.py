@@ -74,7 +74,6 @@ def calculate_ts_data(cfg, raw_df, start_date=None):
     '''
     Calculates estimates for daily water consumption based on provided historical data. Assumes each client consumes
     water at a uniform rate over the billing period. Produces a time series dataset indexed by date.
-    at a uniform rate by each
     :param cfg: project config
     :param raw_df: A DataFrame containing raw water consumption data
     :param start_date: The minimum date at which at which to create daily estimates for
@@ -141,9 +140,34 @@ def calculate_ts_data(cfg, raw_df, start_date=None):
     for missing_range_endpts in cfg['DATA']['MISSING_RANGES']:
         missing_range = pd.date_range(pd.to_datetime(missing_range_endpts[0]), pd.to_datetime(missing_range_endpts[1]))
         daily_df = daily_df[~daily_df.index.isin(missing_range)] # Remove noise from missing date ranges
-    daily_df = daily_df[cfg['DATA']['START_TRIM']:-cfg['DATA']['END_TRIM']]
 
     return daily_df
+
+
+def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None):
+    '''
+    Transform raw water demand data into a time series dataset ready to be fed into a model.
+    :param cfg: project config
+    :param save_raw_df: Flag indicating whether to save intermediate raw data
+    :param save_prepr_df: Flag indicating whether to save the preprocessed data
+    :param rate_class: Rate class to filter by
+    :param out_path: Path to save updated preprocessed data
+    '''
+
+    run_start = datetime.today()
+    tqdm.pandas()
+    if cfg is None:
+        cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
+
+    raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
+    preprocessed_df = calculate_ts_data(cfg, raw_df)
+    preprocessed_df = preprocessed_df[cfg['DATA']['START_TRIM']:-cfg['DATA']['END_TRIM']]
+    if save_prepr_df:
+        out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
+        preprocessed_df.to_csv(out_path, sep=',', header=True)
+
+    print("Done. Runtime = ", ((datetime.today() - run_start).seconds / 60), " min")
+    return preprocessed_df
 
 
 def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None):
@@ -175,6 +199,7 @@ def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='a
 
     # Combine old and new preprocessed data
     preprocessed_df = pd.concat([old_preprocessed_df, new_preprocessed_df], axis=0)
+    preprocessed_df = preprocessed_df[:-cfg['DATA']['END_TRIM']]
 
     if save_prepr_df:
         out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
@@ -259,30 +284,6 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
         client_df.to_csv(cfg['PATHS']['CLIENT_DATA'], sep=',', header=True)
     return client_df
 
-
-def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None):
-    '''
-    Transform raw water demand data into a time series dataset ready to be fed into a model.
-    :param cfg: project config
-    :param save_raw_df: Flag indicating whether to save intermediate raw data
-    :param save_prepr_df: Flag indicating whether to save the preprocessed data
-    :param rate_class: Rate class to filter by
-    :param out_path: Path to save updated preprocessed data
-    '''
-
-    run_start = datetime.today()
-    tqdm.pandas()
-    if cfg is None:
-        cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
-
-    raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
-    preprocessed_df = calculate_ts_data(cfg, raw_df)
-    if save_prepr_df:
-        out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
-        preprocessed_df.to_csv(out_path, sep=',', header=True)
-
-    print("Done. Runtime = ", ((datetime.today() - run_start).seconds / 60), " min")
-    return preprocessed_df
 
 if __name__ == '__main__':
     df = preprocess_ts(rate_class='all')

@@ -21,6 +21,7 @@ class ProphetModel(ModelStrategy):
         self.seasonality_mode = hparams.get('SEASONALITY_MODE', 'additive')
         self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.95)
         self.country = hparams.get('COUNTRY', 'CA')
+        self.future_prediction = None
 
         # Build DataFrame of local holidays
         if hparams.get('HOLIDAYS', None) is None:
@@ -72,7 +73,7 @@ class ProphetModel(ModelStrategy):
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
         test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
-        plot_prophet_forecast(self.model, self.future_prediction)
+        plot_prophet_forecast(self.model, self.future_prediction, save_dir=save_dir)
         return test_metrics
 
 
@@ -122,7 +123,7 @@ class ProphetModel(ModelStrategy):
 
         if not self.model:
             return
-        if not self.future_prediction:
+        if self.future_prediction is None:
             df_prophet = self.model.make_future_dataframe(periods=0, include_history=True, freq='D') # Training set only
             self.future_prediction = self.model.predict(df_prophet)
         results_dir = components_save_dir + '/Prophet_components' + self.train_date + '/'

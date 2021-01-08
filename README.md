@@ -24,9 +24,10 @@ their own locales.
    vi)
    [_Client clustering experiment (using K-Prototypes)_](#client-clustering-experiment-using-k-prototypes)  
    vii) [_Model interpretability_](#model-interpretability)
-4. [**_Data Preprocessing_**](#data-preprocessing)
-5. [**_Project Structure_**](#project-structure)
-6. [**_Project Config_**](#project-config)
+3. [**_Data Preprocessing_**](#data-preprocessing)
+4. [**_Project Structure_**](#project-structure)
+5. [**_Project Config_**](#project-config)
+6. [**_Azure Machine Learning Pipelines_**](#azure-machine-learning-pipelines)
 7. [**_Contact_**](#contact)
 
 ## Getting Started
@@ -546,6 +547,84 @@ range has the following configurable fields:
   would like to perform if executing
   [_kprototypes.py_](src/data/kprototypes.py). Choices are
   _'cluster_clients'_ or _'silhouette_analysis'_.
+
+## Azure Machine Learning Pipelines
+We deployed our model retraining and batch predictions functionality to
+Azure cloud computing services. To do this, we created Jupyter notebooks
+to define and run experiments in Azure, and Python scripts corresponding
+to pipeline steps. We included these files in the _azure/_ folder, in
+case they may benefit any parties hoping to use this project. Note that
+Azure is **not** required to run HIFIS-v2 code, as all Python files
+necessary to get started are in the _src/_ folder.
+
+### Additional steps for Azure
+We deployed our model's training and forecasting to Microsoft
+Azure cloud computing services. To do this, we created Jupyter notebooks
+to define and run Azure machine learning pipelines as experiments in
+Azure, and Python scripts corresponding to pipeline steps. We included
+these files in the _azure/_ folder, in case they may benefit any parties
+hoping to use this project. Note that Azure is **not** required to run
+the code in this repository, as all Python files necessary to get started are in the
+_src/_ folder. If you plan on using the Azure machine learning pipelines
+defined in the _azure/_ folder, there are a few steps you will need to
+follow first:
+1. Obtain an active Azure subscription.
+2. Ensure you have installed the _azureml-sdk_, _azureml_widgets_, and
+   _sendgrid_ pip packages.
+3. In the [Azure portal](http://portal.azure.com/), create a resource
+   group.
+4. In the [Azure portal](http://portal.azure.com/), create a machine
+   learning workspace, and set its resource group to be the one you
+   created in step 2. When you open your workspace in the portal, there
+   will be a button near the top of the page that reads "Download
+   config.json". Click this button to download the config file for the
+   workspace, which contains confidential information about your
+   workspace and subscription. Once the config file is downloaded,
+   rename it to _ws_config.json_. Move this file to the _azure/_ folder
+   in the HIFIS-v2 repository. For reference, the contents of
+   _ws_config.json_ resemble the following:
+
+```
+{
+    "subscription_id": "your-subscription-id",
+    "resource_group": "name-of-your-resource-group",
+    "workspace_name": "name-of-your-machine-learning-workspace"
+}  
+```
+
+4. To configure automatic email alerts when errors occur during pipeline execution,
+   you must create a file called _config_private.yml_ and place it in
+   the root directory of the HIFIS-v2 repository. Next, obtain an API
+   key from [SendGrid](https://sendgrid.com/), which is a service that
+   will allow your Python scripts to request that emails be sent. Within
+   _config_private.yml_, create an _EMAIL_ field, as shown below. Emails will be sent
+   to addresses and CC'd to addresses specified in the _TO_EMAILS_ERROR_ and
+   _CC_EMAILS_ERROR_ fields respectively. Upon successful completion of pipeline
+   execution, emails will be sent to addresses and CC'd to addresses specified in the
+   _TO_EMAILS_COMPLETION_ and _CC_EMAILS_COMPLETION_ fields respectively.
+```
+EMAIL:
+  SENDGRID_API_KEY: 'your-sendgrid-api-key'
+  TO_EMAILS_ERROR: [alice@website1.com, bob@website1.com]
+  CC_EMAILS_ERROR: [carol@website2.com]
+  TO_EMAILS_COMPLETION: [bob@website1.com]
+  CC_EMAILS_COMPLETION: [eve@website2.com]
+```
+
+5. If desired, you may change some key constants that dictate the
+   pipeline's functionality. In the _[training pipeline
+   notebook](/azure/train_pipeline.ipynb)_, consider the following
+   constants defined at the top of the block entitled _Define pipeline
+   and submit experiment_:
+- _TEST_DAYS_: The size of the test set for model evaluation (in days)
+- _FORECAST_DAYS_: The number of days into the future to create a
+  forecast for
+- _PREPROCESS_STRATEGY_: Set to _'quick'_ to preprocess only the latest
+  data, avoiding recomputation of any preexisting preprocessed data.
+  This option can save the experimenter lots of time. Set to
+  _'complete'_ to preprocess all available data.
+- _EXPERIMENT_NAME_: Defines the name of the experiment as it will
+  appear in the Azure Machine Learning Studio.
 
 ## Contact
 

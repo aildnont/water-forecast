@@ -7,6 +7,7 @@ from src.models.sarimax import SARIMAXModel
 from src.models.nn import *
 from src.models.skmodels import *
 from src.train import load_dataset
+from src.visualization.visualize import plot_prophet_forecast
 
 # Map model names to their respective class definitions
 MODELS_DEFS = {
@@ -48,6 +49,11 @@ def forecast(days, cfg=None, model=None, save=False):
     else:
         recent_data = None
     results = model.forecast(days, recent_data=recent_data)
+    if model.name == 'Prophet':
+        plot_prophet_forecast(model.model, model.future_prediction, save_dir=cfg['PATHS']['FORECAST_VISUALIZATIONS'])
+        model.future_prediction.to_csv(cfg['PATHS']['PREDICTIONS'] + 'detailed_forecast_' + model_name + '_' + str(days) + 'd_' +
+               datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.csv',
+               index=False, index_label=False)
     if save:
         results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(days) + 'd_' +
                        datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.csv',
