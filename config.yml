@@ -51,8 +51,8 @@ TRAIN:
 # Forecasting
 FORECAST:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
-  MODEL_PATH: 'C:/Users/Blake/Documents/Work/Projects/h2o-forecast/results/models/Prophet.pkl'
-  DAYS: 1300
+  MODEL_PATH: './results/models/Prophet.pkl'
+  DAYS: 1461
 
 # Hyperparameters specific to individual models
 HPARAMS:
