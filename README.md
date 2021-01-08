@@ -25,10 +25,11 @@ their own locales.
    [_Client clustering experiment (using K-Prototypes)_](#client-clustering-experiment-using-k-prototypes)  
    vii) [_Model interpretability_](#model-interpretability)
 3. [**_Data Preprocessing_**](#data-preprocessing)
-4. [**_Project Structure_**](#project-structure)
-5. [**_Project Config_**](#project-config)
-6. [**_Azure Machine Learning Pipelines_**](#azure-machine-learning-pipelines)
-7. [**_Contact_**](#contact)
+4. [**_Troubleshooting_**](#troubleshooting)
+5. [**_Project Structure_**](#project-structure)
+6. [**_Project Config_**](#project-config)
+7. [**_Azure Machine Learning Pipelines_**](#azure-machine-learning-pipelines)
+8. [**_Contact_**](#contact)
 
 ## Getting Started
 1. Clone this repository (for help see this
@@ -359,6 +360,9 @@ period, and several other features pertaining to their water access
 considerations). These other features were numerical, categorical, or
 Boolean. Our goal was to transform all the raw data into a dataset that
 contained snapshots of the entire city's water consumption for each day.
+See the [data dictionary](data/info/data_dictionary.xlsx) for a complete
+categorization and description of the features that appeared in the CSV
+files comprising our raw data.
 
 Aggregate system daily water consumption was estimated as follows. An
 estimate for each client's water consumption on a particular day was
@@ -394,6 +398,16 @@ dataset, mapping Date to Consumption. Note that some model architectures
 available in this repository require univariate data; when training
 these models, other features would be disregarded.
 
+## Troubleshooting
+
+#### 1. New raw data has a modified feature name
+Data preprocessing issues can arise if a feature's name has been changed
+when providing a new raw data CSV for preprocessing. Prior to running
+preprocessing, ensure that all relevant feature names match between raw
+data CSVs. We suggest that you convert any new feature names deviating
+from feature names in older CSVs to their older versions, prior to
+running preprocessing.
+
 ## Project Structure
 The project looks similar to the directory structure below. Disregard
 any _.gitkeep_ files, as their only purpose is to force Git to track
@@ -402,45 +416,49 @@ empty files that enable Python to recognize certain directories as
 packages.
 
 ```
+├── azure                            <- folder containing Azure ML pipelines
 ├── data
-│   ├── processed                 <- Products of preprocessing
-│   ├── raw                       <- Raw data
-│   └── serializations            <- Serialized sklearn transformers
+│   ├── processed                    <- Products of preprocessing
+│   ├── raw                          <- Raw data
+|   |   ├── info                     <- Files containing details on raw data
+|   |   |   └── data_dictionary.xlsx <- Description of fields in our raw data
+|   |   ├── intermediate             <- Raw data that has been merged during preprocessing
+|   |   └── quarterly                <- Raw data CSV files (where new raw data CSVs are placed)
+│   └── serializations               <- Serialized sklearn transformers
 |
 ├── img
-|   ├── data_visualizations       <- Visualizations of preprocessed data, clusterings
-|   ├── experiment_visualizations <- Visualizations for experiments
-|   ├── forecast_visualizations   <- Visualizations of model forecasts
-|   └── readme                    <- Image assets for README.md
+|   ├── data_visualizations          <- Visualizations of preprocessed data, clusterings
+|   ├── experiment_visualizations    <- Visualizations for experiments
+|   ├── forecast_visualizations      <- Visualizations of model forecasts
+|   └── readme                       <- Image assets for README.md
 ├── results
-│   ├── experiments               <- Experiment results
-│   ├── logs                      <- TensorBoard logs
-│   ├── models                    <- Trained model serializations
-│   └── predictions               <- Model predictions
+│   ├── experiments                  <- Experiment results
+│   ├── logs                         <- TensorBoard logs
+│   ├── models                       <- Trained model serializations
+│   └── predictions                  <- Model predictions
 |
 ├── src
 │   ├── data
-|   |   ├── data_merge.py         <- Script for merging new raw data with existing raw data
-|   |   ├── kprototypes.py        <- Script for learning client clusters
-|   |   └── preprocess.py         <- Data preprocessing script
-│   ├── models                    <- TensorFlow model definitions
-|   |   ├── arima.py              <- Script containing ARIMA model class definition
-|   |   ├── model.py              <- Script containing abstract model class definition
-|   |   ├── nn.py                 <- Script containing neural network model class definitions
-|   |   ├── prophet.py            <- Script containing Prophet model class definition
-|   |   ├── sarimax.py             <- Script containing SARIMAX model class definition
-|   |   └── skmodels.py           <- Script containing scikit-learn model class definitions
-|   ├── visualization             <- Visualization scripts
-|   |   └── visualize.py          <- Script for visualization production
-|   ├── predict.py                <- Script for prediction on raw data using trained models
-|   └── train.py                  <- Script for training experiments
+|   |   ├── kprototypes.py           <- Script for learning client clusters
+|   |   └── preprocess.py            <- Data preprocessing script
+│   ├── models                       <- TensorFlow model definitions
+|   |   ├── arima.py                 <- Script containing ARIMA model class definition
+|   |   ├── model.py                 <- Script containing abstract model class definition
+|   |   ├── nn.py                    <- Script containing neural network model class definitions
+|   |   ├── prophet.py               <- Script containing Prophet model class definition
+|   |   ├── sarimax.py               <- Script containing SARIMAX model class definition
+|   |   └── skmodels.py              <- Script containing scikit-learn model class definitions
+|   ├── visualization                <- Visualization scripts
+|   |   └── visualize.py             <- Script for visualization production
+|   ├── predict.py                   <- Script for prediction on raw data using trained models
+|   └── train.py                     <- Script for training experiments
 |
-├── .gitignore                    <- Files to be be ignored by git.
-├── config.yml                    <- Values of several constants used throughout project
-├── config_private.yml            <- Private information, e.g. database keys (not included in repo)
-├── LICENSE                       <- Project license
-├── README.md                     <- Project description
-└── requirements.txt              <- Lists all dependencies and their respective versions
+├── .gitignore                       <- Files to be be ignored by git.
+├── config.yml                       <- Values of several constants used throughout project
+├── config_private.yml               <- Private information, e.g. database keys (not included in repo)
+├── LICENSE                          <- Project license
+├── README.md                        <- Project description
+└── requirements.txt                 <- Lists all dependencies and their respective versions
 ```
 
 ## Project Config
@@ -458,6 +476,7 @@ below.
 #### PATHS
 - **RAW_DATA_DIR**: Directory containing raw data
 - **RAW_DATASET**: Path to file containing aggregated raw data CSV
+- **FULL_RAW_DATASET**: Path to merged and deduplicated raw data CSV
 - **PREPROCESSED_DATA**: Path to CSV file containing preprocessed data
 - **CLIENT_DATA**: Path to CSV file containing client data organized for
   K-Prototypes clustering
@@ -467,7 +486,15 @@ below.
 - **CATEGORICAL_FEATS**: A list of names of categorical features in the
   raw data
 - **BOOLEAN_FEATS**: A list of names of Boolean features in the raw data
-- **TEST_FRAC**: Fraction of dates comprising the test set
+- **TEST_FRAC**: Fraction of dates comprising the test set (in case of
+  fractional test set)
+- **TEST_DAYS**: Number of dates comprising the test set (in case of
+  fixed test set)
+- **START_TRIM**: Number of dates to clip from start of preprocessed
+  dataset
+- **END_TRIM**: Number of dates to clip from end of preprocessed dataset
+- **MISSING_RANGES**: A list of 2-element lists, each containing the
+  start and end dates of closed intervals where raw data is missing
 #### TRAIN
 - **MODEL**: The type of model to train. Can be set to one of One of
   _'prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax',
@@ -485,6 +512,8 @@ below.
   - **LAST_FOLDS**: If you wish to speed up the k-fold cross validation
     for each step of the Bayesian hyperparameter optimization, only
     train models for values of _k_ in _[LAST_FOLDS, N_FOLDS]_.
+- **INTERPRETABILITY**: If training a Prophet model, save visualizations
+  and CSVs representing its individual components
 #### FORECAST
 - **MODEL**: The type of model for forecasting. Can be set to one of One
   of _'prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax',
