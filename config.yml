@@ -1,9 +1,9 @@
 # Relevant file/directory paths
 PATHS:
-  RAW_DATA_DIR: 'data/raw/'
-  RAW_DATASET: 'data/raw/raw_data.csv'
-  PREPROCESSED_DATA: 'data/preprocessed/preprocessed_data.csv'
-  INTERMEDIATE_DATA: 'data/preprocessed/intermediate_data.csv'
+  RAW_DATA_DIR: 'data/raw/quarterly/'
+  RAW_DATASET: 'data/raw/intermediate/all/raw_data.csv'
+  FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
+  PREPROCESSED_DATA: 'data/preprocessed/all/preprocessed_data.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
@@ -31,7 +31,11 @@ DATA:
   CATEGORICAL_FEATS: ['RATE_CLASS', 'METER_SIZE', 'INST_TYPE', 'EST_READ']
   BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
                   'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
-  TEST_FRAC: 0.2
+  TEST_FRAC: 0.1
+  TEST_DAYS: 183
+  START_TRIM: 242
+  END_TRIM: 50
+  MISSING_RANGES: [['2014-03-01', '2014-09-30'], ['2017-03-25', '2017-05-31']]
 
 # Training experiments
 TRAIN:
@@ -39,33 +43,35 @@ TRAIN:
   EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
   N_FOLDS: 6
   HPARAM_SEARCH:
-    N_EVALS: 500
+    N_EVALS: 100
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
-  INTERPRETABILITY: false
+  INTERPRETABILITY: true
 
 # Forecasting
 FORECAST:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
   MODEL_PATH: 'C:/Users/Blake/Documents/Work/Projects/h2o-forecast/results/models/Prophet.pkl'
-  DAYS: 100
+  DAYS: 1300
 
 # Hyperparameters specific to individual models
 HPARAMS:
   PROPHET:
     COUNTRY: 'CA'
-    CHANGEPOINT_PRIOR_SCALE: 0.052831
-    SEASONALITY_PRIOR_SCALE: 0.019907
-    HOLIDAYS_PRIOR_SCALE: 1.23784
+    CHANGEPOINT_PRIOR_SCALE: 0.001
+    SEASONALITY_PRIOR_SCALE: 0.01 
+    HOLIDAYS_PRIOR_SCALE: 10 
     SEASONALITY_MODE: 'additive'
     CHANGEPOINT_RANGE: 0.8
     HOLIDAYS:
       Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
                     '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',
-                    '2022-02-21', '2023-02-20', '2024-02-19']
+                    '2022-02-21', '2023-02-20', '2024-02-19', '2025-02-17', '2026-02-16', '2027-02-15', '2028-02-21', 
+                    '2029-02-19', '2030-02-18']
       Civic Holiday: ['2008-08-04', '2009-08-03', '2010-08-02', '2011-08-01', '2012-08-06', '2013-08-05',
                         '2014-08-04', '2015-08-03', '2016-08-01', '2017-08-07', '2018-08-06', '2019-08-05',
-                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05']
+                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05', '2025-08-04', 
+                        '2026-08-03', '2027-08-02', '2028-08-07', '2029-08-06', '2030-08-05']
   ARIMA:
     AUTO_PARAMS: false
     P: 7

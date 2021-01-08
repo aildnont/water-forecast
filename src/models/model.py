@@ -93,7 +93,7 @@ class ModelStrategy(object):
             forecast_df["pred_int_up"] = forecast_df["forecast"] + STD_DEVS * metrics['error_std']
 
             if plot:
-                plot_model_evaluation(forecast_df, self.name, metrics, save_fig=True)
+                plot_model_evaluation(forecast_df, self.name, metrics, save_dir=save_dir, save_fig=True)
 
             forecast_df = forecast_df[["gt", "model", "residuals", "conf_int_low", "conf_int_up",
                         "forecast", "error", "pred_int_low", "pred_int_up"]]

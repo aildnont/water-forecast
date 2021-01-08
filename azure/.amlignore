@@ -1,4 +1,4 @@
-processed/
+preprocessed/
 raw/
 serializations/
 img/
@@ -10,3 +10,4 @@ LICENCE
 README.md
 .gitignore
 *.ipynb
+!config-private.yml
