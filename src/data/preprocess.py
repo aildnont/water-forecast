@@ -40,9 +40,11 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
                     df[f] = 0.0
             if f in num_feats and df[f].dtype == 'object':
                 try:
-                    invalid_mask = df[f].fillna('0').str.contains('/')
-                    df[f][invalid_mask] = 0
-                    df[f] = df[f].astype('float64')
+                    df[f] = pd.to_numeric(df[f], errors='coerce')
+                    df[f].fillna(0, inplace=True)
+                    #invalid_mask = df[f].fillna('0').str.contains('/')
+                    #df[f][invalid_mask] = 0
+                    #df[f] = df[f].astype('float64')
                 except Exception as e:
                     print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
@@ -180,7 +182,7 @@ def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='a
     '''
 
     # Load new raw data and remove any rows that appear in old raw data
-    old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
+    old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'], low_memory=False)
     old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
     min_preprocess_date = old_raw_df['EFFECTIVE_DATE'].max() - timedelta(days=183)  # Latest date in old raw dataset minus 1/2 year, to be safe
     new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
@@ -286,7 +288,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
 
 if __name__ == '__main__':
-    df = preprocess_ts(rate_class='all')
-    #cfg = yaml.full_load(open("./config.yml", 'r'))
-    #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
+    #df = preprocess_ts(rate_class='all')
+    cfg = yaml.full_load(open("./config.yml", 'r'))
+    df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)

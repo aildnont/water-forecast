@@ -146,30 +146,30 @@ def train_all(cfg, save_models=False, write_logs=False):
     return metrics_df
 
 
-def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=None, last_folds=None, save_results=False):
+def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=None, save_results=False):
     '''
     Perform a nested cross-validation with day-forward chaining. Results are saved in CSV format.
     :param cfg: project config
     :param dataset: A DataFrame consisting of the entire dataset
     :param metrics: list of metrics to report
     :param model_name: String identifying model
-    :param last_folds: Limit cross validation to the most recent last_folds folds
     :param save_results: Flag indicating whether to save results
     :return DataFrame of metrics
     '''
 
+    n_quantiles = cfg['TRAIN']['N_QUANTILES']
     n_folds = cfg['TRAIN']['N_FOLDS']
     if dataset is None:
         dataset = pd.read_csv(cfg['PATHS']['PREPROCESSED_DATA'])
         dataset['Date'] = pd.to_datetime(dataset['Date'])
-    if last_folds is None:
-        last_folds = n_folds
+    if n_folds is None:
+        n_folds = n_quantiles
     if metrics is None:
         metrics = ['residuals_mean', 'residuals_std', 'error_mean', 'error_std', 'MAE', 'MAPE', 'MSE', 'RMSE']
-    n_rows = n_folds if last_folds is None else last_folds
+    n_rows = n_quantiles if n_folds is None else n_folds
     metrics_df = pd.DataFrame(np.zeros((n_rows + 2, len(metrics) + 1)), columns=['Fold'] + metrics)
-    metrics_df['Fold'] = list(range(n_folds - last_folds + 1, n_folds + 1)) + ['mean', 'std']
-    ts_cv = TimeSeriesSplit(n_splits=n_folds)
+    metrics_df['Fold'] = list(range(n_quantiles - n_folds + 1, n_quantiles + 1)) + ['mean', 'std']
+    ts_cv = TimeSeriesSplit(n_splits=n_quantiles)
     model_name = cfg['TRAIN']['MODEL'].upper() if model_name is None else model_name
     hparams = cfg['HPARAMS'][model_name] if hparams is None else hparams
 
@@ -179,7 +179,7 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
     cur_fold = 0
     row_idx = 0
     for train_index, test_index in ts_cv.split(dataset):
-        if cur_fold >= n_folds - last_folds:
+        if cur_fold >= n_quantiles - n_folds:
             print('Fitting model for fold ' + str(cur_fold))
             model = model_def(hparams)
             model.train_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -189,10 +189,6 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
             if model.univariate:
                 train_df = train_df[['Date', 'Consumption']]
                 test_df = test_df[['Date', 'Consumption']]
-
-            if model_name in ['LSTM', 'GRU', '1DCNN']:
-                if model.val_frac*train_df.shape[0] < model.T_x:
-                    continue    # Validation set can't be larger than input sequence length
 
             # Train the model and evaluate performance on test set
             model.fit(train_df)
@@ -205,8 +201,8 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
 
     # Record mean and standard deviation of test set results
     for metric in metrics:
-        metrics_df[metric][last_folds] = metrics_df[metric][0:-2].mean()
-        metrics_df[metric][last_folds + 1] = metrics_df[metric][0:-2].std()
+        metrics_df[metric][n_folds] = metrics_df[metric][0:-2].mean()
+        metrics_df[metric][n_folds + 1] = metrics_df[metric][0:-2].std()
 
     # Save results
     if save_results:
@@ -256,11 +252,10 @@ def bayesian_hparam_optimization(cfg):
     def objective(vals):
         hparams = dict(zip(hparam_names, vals))
         print('HPARAM VALUES: ', hparams)
-        #scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams,
-        #                          last_folds=cfg['TRAIN']['HPARAM_SEARCH']['LAST_FOLDS'])[objective_metric]
-        #score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
-        test_metrics, _ = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
-        score = test_metrics['MAPE']
+        scores = cross_validation(cfg, dataset=dataset, metrics=[objective_metric], model_name=model_name, hparams=hparams)[objective_metric]
+        score = scores[scores.shape[0] - 2]     # Get the mean value for the error metric from the cross validation
+        #test_metrics, _ = train_single(cfg, hparams=hparams, save_model=False, write_logs=False, save_metrics=False)
+        #score = test_metrics['MAPE']
         return score   # We aim to minimize error
     search_results = gp_minimize(func=objective, dimensions=dimensions, acq_func='EI',
                                  n_calls=cfg['TRAIN']['HPARAM_SEARCH']['N_EVALS'], verbose=True)

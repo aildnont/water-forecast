@@ -40,10 +40,11 @@ DATA:
 # Training experiments
 TRAIN:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
-  EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'hparam_search', 'cross_validation']
-  N_FOLDS: 6
+  EXPERIMENT: 'train_single'            # One of ['train_single', 'train_all', 'hparam_search', 'cross_validation']
+  N_QUANTILES: 10
+  N_FOLDS: 5
   HPARAM_SEARCH:
-    N_EVALS: 100
+    N_EVALS: 500
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
   INTERPRETABILITY: true
@@ -59,8 +60,8 @@ HPARAMS:
   PROPHET:
     COUNTRY: 'CA'
     CHANGEPOINT_PRIOR_SCALE: 0.001
-    SEASONALITY_PRIOR_SCALE: 0.01 
-    HOLIDAYS_PRIOR_SCALE: 10 
+    SEASONALITY_PRIOR_SCALE: 0.01
+    HOLIDAYS_PRIOR_SCALE: 0.01
     SEASONALITY_MODE: 'additive'
     CHANGEPOINT_RANGE: 0.8
     HOLIDAYS:
@@ -88,16 +89,16 @@ HPARAMS:
     M: 365
   LSTM:
     UNIVARIATE: true
-    T_X: 8
+    T_X: 200
     BATCH_SIZE: 32
     EPOCHS: 500
-    PATIENCE: 7
+    PATIENCE: 15
     VAL_FRAC: 0.1
-    LR: 0.000718
-    LOSS: 'huber_loss'
-    UNITS: 128
-    DROPOUT: 0.0017
-    FC0_UNITS: 32
+    LR: 0.00001
+    LOSS: 'mse'
+    UNITS: 4
+    DROPOUT: 0.0
+    FC0_UNITS: 64
     FC1_UNITS: 64
   GRU:
     UNIVARIATE: true
@@ -114,23 +115,23 @@ HPARAMS:
     FC1_UNITS: 16
   1DCNN:
     UNIVARIATE: true
-    T_X: 53
-    BATCH_SIZE: 64
-    EPOCHS: 300
-    PATIENCE: 11
+    T_X: 180
+    BATCH_SIZE: 32
+    EPOCHS: 500
+    PATIENCE: 5
     VAL_FRAC: 0.1
-    LR: 0.00001
+    LR: 0.0003
     LOSS: 'mae'
-    FILTERS: 8
+    FILTERS: 16
     KERNEL_SIZE: 3
-    STRIDE: 2
-    N_CONV_LAYERS: 1
+    STRIDE: 1
+    N_CONV_LAYERS: 2
     FC0_UNITS: 64
-    FC1_UNITS: 8
+    FC1_UNITS: 32
     DROPOUT: 0.0
   LINEAR_REGRESSION:
     UNIVARIATE: true
-    T_X: 365
+    T_X: 300
   RANDOM_FOREST:
     UNIVARIATE: true
     T_X: 365
@@ -169,7 +170,7 @@ HPARAM_SEARCH:
       RANGE: ['mse', 'mae', 'huber_loss']
     UNITS:
       TYPE: 'set'
-      RANGE: [8, 16, 32, 64, 128]
+      RANGE: [4, 8, 16]
     DROPOUT:
       TYPE: 'float_uniform'
       RANGE: [0.0, 0.5]
@@ -182,7 +183,7 @@ HPARAM_SEARCH:
   1DCNN:
     T_X:
       TYPE: 'int_uniform'
-      RANGE: [30, 60]
+      RANGE: [30, 365]
     BATCH_SIZE:
       TYPE: 'set'
       RANGE: [16, 32, 64]
@@ -197,7 +198,7 @@ HPARAM_SEARCH:
       RANGE: ['mse', 'mae', 'huber_loss']
     FILTERS:
       TYPE: 'set'
-      RANGE: [8, 16, 32, 64, 128]
+      RANGE: [4, 8, 16]
     KERNEL_SIZE:
       TYPE: 'set'
       RANGE: [3, 5]
@@ -206,19 +207,20 @@ HPARAM_SEARCH:
       RANGE: [1, 2]
     N_CONV_LAYERS:
       TYPE: 'int_uniform'
-      RANGE: [1, 5]
+      RANGE: [1, 3]
     DROPOUT:
       TYPE: 'float_uniform'
       RANGE: [0.0, 0.5]
     FC0_UNITS:
       TYPE: 'set'
-      RANGE: [32, 64, 128, 256]
+      RANGE: [16, 32, 64]
     FC1_UNITS:
       TYPE: 'set'
-      RANGE: [16, 32, 64, 128]
-    FC2_UNITS:
-      TYPE: 'set'
-      RANGE: [8, 16, 32, 64]
+      RANGE: [8, 16, 32]
+  LINEAR_REGRESSION:
+    T_X:
+      TYPE: 'int_uniform'
+      RANGE: [30, 365]
 
 # Data clustering
 K-PROTOTYPES:
