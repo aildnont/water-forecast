@@ -24,7 +24,7 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     print('Loading raw data from spreadsheets.')
     raw_df = pd.DataFrame()
     for filename in tqdm(raw_data_filenames):
-        df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
+        df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False, index_col=False)    # Load a water demand CSV
 
         if rate_class_str in df['RATE_CLASS'].unique().tolist():
             df = df[df['RATE_CLASS'] == rate_class_str]         # Filter by a rate class if desired
@@ -42,9 +42,6 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
                 try:
                     df[f] = pd.to_numeric(df[f], errors='coerce')
                     df[f].fillna(0, inplace=True)
-                    #invalid_mask = df[f].fillna('0').str.contains('/')
-                    #df[f][invalid_mask] = 0
-                    #df[f] = df[f].astype('float64')
                 except Exception as e:
                     print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
