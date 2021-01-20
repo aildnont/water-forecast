@@ -45,10 +45,12 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
                 except Exception as e:
                     print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
+        df['EFFECTIVE_DATE'] = pd.to_datetime(df['EFFECTIVE_DATE'], errors='coerce')
+        df['END_DATE'] = pd.to_datetime(df['END_DATE'], errors='coerce')
         raw_df = pd.concat([raw_df, df], axis=0, ignore_index=True)     # Concatenate next batch of data
+        shape1 = raw_df.shape
         raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)   # Drop duplicate entries appearing in different data slices
-    raw_df['EFFECTIVE_DATE'] = pd.to_datetime(raw_df['EFFECTIVE_DATE'], errors='coerce')
-    raw_df['END_DATE'] = pd.to_datetime(raw_df['END_DATE'], errors='coerce')
+        print("Deduplication: ", shape1, "-->", raw_df.shape)
     
     print('Consumption total: ', raw_df['CONSUMPTION'].sum())
     print(raw_df.shape)
@@ -285,7 +287,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
 
 if __name__ == '__main__':
-    #df = preprocess_ts(rate_class='all')
-    cfg = yaml.full_load(open("./config.yml", 'r'))
-    df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
+    df = preprocess_ts(rate_class='ins', save_raw_df=True, save_prepr_df=True)
+    #cfg = yaml.full_load(open("./config.yml", 'r'))
+    #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)
