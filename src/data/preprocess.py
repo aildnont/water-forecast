@@ -24,7 +24,7 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     print('Loading raw data from spreadsheets.')
     raw_df = pd.DataFrame()
     for filename in tqdm(raw_data_filenames):
-        df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
+        df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False, index_col=False)    # Load a water demand CSV
 
         if rate_class_str in df['RATE_CLASS'].unique().tolist():
             df = df[df['RATE_CLASS'] == rate_class_str]         # Filter by a rate class if desired
@@ -40,16 +40,17 @@ def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
                     df[f] = 0.0
             if f in num_feats and df[f].dtype == 'object':
                 try:
-                    invalid_mask = df[f].fillna('0').str.contains('/')
-                    df[f][invalid_mask] = 0
-                    df[f] = df[f].astype('float64')
+                    df[f] = pd.to_numeric(df[f], errors='coerce')
+                    df[f].fillna(0, inplace=True)
                 except Exception as e:
                     print("Exception ", e, " in file ", filename, " feature ", f)
         df = df[feat_names]
+        df['EFFECTIVE_DATE'] = pd.to_datetime(df['EFFECTIVE_DATE'], errors='coerce')
+        df['END_DATE'] = pd.to_datetime(df['END_DATE'], errors='coerce')
         raw_df = pd.concat([raw_df, df], axis=0, ignore_index=True)     # Concatenate next batch of data
+        shape1 = raw_df.shape
         raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)   # Drop duplicate entries appearing in different data slices
-    raw_df['EFFECTIVE_DATE'] = pd.to_datetime(raw_df['EFFECTIVE_DATE'], errors='coerce')
-    raw_df['END_DATE'] = pd.to_datetime(raw_df['END_DATE'], errors='coerce')
+        print("Deduplication: ", shape1, "-->", raw_df.shape)
     
     print('Consumption total: ', raw_df['CONSUMPTION'].sum())
     print(raw_df.shape)
@@ -180,7 +181,7 @@ def preprocess_new_data(cfg, save_raw_df=True, save_prepr_df=True, rate_class='a
     '''
 
     # Load new raw data and remove any rows that appear in old raw data
-    old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'])
+    old_raw_df = pd.read_csv(cfg['PATHS']['RAW_DATASET'], low_memory=False)
     old_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(old_raw_df['EFFECTIVE_DATE'], errors='coerce')
     min_preprocess_date = old_raw_df['EFFECTIVE_DATE'].max() - timedelta(days=183)  # Latest date in old raw dataset minus 1/2 year, to be safe
     new_raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
@@ -286,7 +287,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
 
 if __name__ == '__main__':
-    df = preprocess_ts(rate_class='all')
+    df = preprocess_ts(rate_class='ins', save_raw_df=True, save_prepr_df=True)
     #cfg = yaml.full_load(open("./config.yml", 'r'))
     #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)

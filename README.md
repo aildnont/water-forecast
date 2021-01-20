@@ -217,11 +217,13 @@ towards any particular dataset. By using cross validation, we can be
 increasingly confident in the generalizability of our model in the
 future. We employ a
 [time series variant](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html)
-of k-fold cross validation to validate our model. For the
-_k<sup>th</sup>_ split, the training set comprises the first _k_ folds
-of time series data and the test set is the _(k+1)<sup>th</sup>_ fold.
-Remaining data is disregarded for the time being. To run a cross
-validation experiment, follow the steps below.
+of k-fold cross validation to validate our model. First, we divide our
+dataset into a set of quantiles (e.g. 10 deciles). For the
+_k<sup>th</sup>_ split, the _k<sup>th</sup>_ quantile comprises the test
+set, and the training set is composed of all data preceding the
+_k<sup>th</sup>_ quantile. All data after the _k<sup>th</sup>_ quantile
+is disregarded for that particular fold. To run a cross validation
+experiment, follow the steps below.
 
 1. Once you have obtained a preprocessed dataset (see step 3 of
    [_Getting Started_](#getting-started), ensure that the preprocessed
@@ -229,8 +231,10 @@ validation experiment, follow the steps below.
    _"preprocessed_data.csv"_.
 2. In [config.yml](config.yml), set _EXPERIMENT >> TRAIN_ to
    _'cross_validation'_. Set _TRAIN >> MODEL_ to the appropriate string
-   representing the model type you wish to train. Set _TRAIN >> N_FOLDS_
-   to your chosen value for _k_.
+   representing the model type you wish to train. Set _TRAIN >>
+   N_QUANTILES_ to your chosen value for the number of quantiles to
+   split the data into. Set _TRAIN >> N_FOLDS_ to your chosen value for
+   _k_.
 3. Execute [_train.py_](src/train.py) to conduct cross validation with
    your chosen model. _k_ models will be trained, each on successively
    larger datasets. A spreadsheet detailing test set forecast
@@ -357,12 +361,15 @@ contract account number), the start and end dates of their current
 billing period, how much water was consumed over the current billing
 period, and several other features pertaining to their water access
 (e.g. meter type, land parcel area, flags for certain billing
-considerations). These other features were numerical, categorical, or
+considerations). In this repository, we included a
+[sample](data/raw/info/sample_raw_data.csv) of one such CSV file, with
+randomly inputted data, to demonstrate the features that we had
+available to us. These other features were numerical, categorical, or
 Boolean. Our goal was to transform all the raw data into a dataset that
 contained snapshots of the entire city's water consumption for each day.
-See the [data dictionary](data/info/data_dictionary.xlsx) for a complete
-categorization and description of the features that appeared in the CSV
-files comprising our raw data.
+See the [data dictionary](data/raw/info/data_dictionary.xlsx) for a
+complete categorization and description of the features that appeared in
+the CSV files comprising our raw data.
 
 Aggregate system daily water consumption was estimated as follows. An
 estimate for each client's water consumption on a particular day was
@@ -503,15 +510,14 @@ below.
   perform if executing [_train.py_](src/train.py). Choices are
   _'train_single', 'train_all', 'hparam_search', 'hparam_search',_ or
   _'cross_validation'_.
-- **N_FOLDS**: Number of folds for time series k-fold cross validation
+- **N_QUANTILES**: Number of quantiles to split the data into
+- **N_FOLDS**: Number of recent quantiles comprising the k folds for
+  time series k-fold cross validation
 - **HPARAM_SEARCH**: Parameters associated with Bayesian hyperparameter
   search
   - **N_EVALS**: Number of combinations of hyperparameters to test
   - **HPARAM_OBJECTIVE**: Metric to optimize for. Set to one of _'MAPE',
     'MAE', 'MSE',_ or _'RMSE'_.
-  - **LAST_FOLDS**: If you wish to speed up the k-fold cross validation
-    for each step of the Bayesian hyperparameter optimization, only
-    train models for values of _k_ in _[LAST_FOLDS, N_FOLDS]_.
 - **INTERPRETABILITY**: If training a Prophet model, save visualizations
   and CSVs representing its individual components
 #### FORECAST
