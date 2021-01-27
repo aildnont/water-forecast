@@ -1,5 +1,6 @@
 # Water Demand Forecasting
-![alt text](img/readme/london_logo.png "The City of London, Canada")
+![The City of London, Canada](img/readme/london_logo.png "The City of
+London, Canada")
 
 The purpose of this project is to deliver a machine learning solution to
 forecasting aggregate water demand. This work was led by the Artificial
@@ -87,8 +88,14 @@ their own locales.
    test error. The image below is an example of one of a test set
    forecast visualization.
 
-![alt text](img/readme/test_set_forecast_visualization.png "Test set
-forecast visualization")
+![Test set forecast evaluation visualization](img/readme/test_set_forecast_visualization.png
+"Visualization for evaluation of the test set forecast. The top left
+image compares training set ground truth and model predictions. The top
+right image shows a the test set forecast versus ground truth, where the
+light and dark blue regions correspond to to the standard deviation of
+the residuals and test error. The bottom left image plots the residuals
+(training error). The bottom right image overlays kernel density
+estimator plots for the residuals and test error.")
 
 ### Train all models
 We investigated several different model types for the task of water
@@ -186,8 +193,8 @@ default hyperparameter ranges set in the _HPARAM_SEARCH_ section of
    [this entry](https://scikit-optimize.github.io/stable/modules/generated/skopt.plots.plot_objective.html)
    in the scikit-optimize docs.
 
-![alt text](img/readme/hparam_visualization.png "A sample Bayesian
-hyperparameter optimization visualization")
+![Visualization of Bayesian hyperparameter optimization](img/readme/hparam_visualization.png
+"A sample Bayesian hyperparameter optimization visualization")
 
 ### Forecasting with a trained model
 Once a model has been fitted, the user may wish to obtain water
@@ -210,6 +217,20 @@ below.
    the length of the forecast in days, and _{yyyymmdd-hhmmss}_ is the
    current time.
 
+#### Prophet Forecast Visualization
+If you have loaded a Prophet model for forecasting, you may use the
+Prophet package to produce a visualization of the forecast, complete
+with uncertainty intervals. This is done automatically when executing a
+train experiment using a Prophet model. Alternatively, add a call to
+_plot_prophet_forecast(prophet_model, prophet_pred)_ (implemented in
+_[visualize.py](src/visualization/visualize.py)_ to the code. By default
+the image will be saved to
+_'img/forecast_visualizations/Prophet_API_forecast{yyyymmdd-hhmmss}.png_.
+Below is an example of such an image, portraying a 4-year forecast.
+
+![Prophet package forecast visualization](img/readme/Prophet_forecast_example.png
+"An example of a forecast visualization produced with the Prophet
+forecasting package")
 
 ### Cross validation
 Cross validation helps us select a model that is as unbiased as possible
@@ -309,8 +330,8 @@ steps.
    Upon visualizing this graph, note that a larger average Silhouette
    Score implies a better clustering. For example, in the below images,
    _k_ = 3 is the best number of clusters.
-   ![alt text](img/readme/silhouette_plot_example.png "A sample
-   Silhouette plot")
+   ![Sample Silhouette Plot](img/readme/silhouette_plot_example.png "A
+   sample Silhouette plot")
 
 ### Model interpretability
 To gain insight into model functionality, we delved into the
@@ -334,7 +355,8 @@ components can be saved and plotted by following the below steps:
    visualization of the components of the Prophet model can be found in
    _img/interpretability\_visualizations/Prophet\_components\_{yyyymmdd-hhmmss}.png_.
    See below for an example of a visualization of the components of a
-   Prophet model. ![alt text](img/readme/Prophet_components.png "An
+   Prophet model.
+   ![Prophet model components](img/readme/Prophet_components.png "An
    example of Prophet components")
 
 ## Data preprocessing
