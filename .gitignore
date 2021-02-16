@@ -16,7 +16,7 @@ results/interpretability/*
 azure/ws_config.json
 azure/.ipynb_checkpoints
 /.amlignore
-!data/preprocessed/.gitkeep
+!data/preprocessed/preprocessed_example.csv
 !data/serializations/.gitkeep
 !data/raw/.gitkeep
 !data/raw/quarterly/.gitkeep

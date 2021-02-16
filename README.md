@@ -371,6 +371,12 @@ following columns:
    - _Consumption_: A float representing an estimate of total water
      consumption on the date
 
+Please see
+[preprocessed_example.csv](data/preprocessed/preprocessed_example.csv)
+for an example of a preprocessed dataset containing the columns
+identified above. Many of the experiments described in this project's
+accompanying paper were conducted using this dataset.
+
 Any other features you wish to use must have their own column. The model
 assumes all datatypes are numerical. As a result, categorical and
 Boolean features must be converted to a numeric representation. Below is
@@ -447,7 +453,8 @@ packages.
 ```
 ├── azure                            <- folder containing Azure ML pipelines
 ├── data
-│   ├── processed                    <- Products of preprocessing
+│   ├── preprocessed                 <- Products of preprocessing
+|   |   ├── preprocessed_example.csv <- Example of daily consumption estimates (i.e. preprocessed data)
 │   ├── raw                          <- Raw data
 |   |   ├── info                     <- Files containing details on raw data
 |   |   |   └── data_dictionary.xlsx <- Description of fields in our raw data
