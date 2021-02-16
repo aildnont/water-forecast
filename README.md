@@ -702,4 +702,10 @@ maross@london.ca
 **Blake VanBerlo**  
 Data Scientist  
 City of London Research and Development Lab  
-C: vanberloblake@gmail.com
+vanberloblake@gmail.com
+
+**Daniel Hsia**  
+Manager, Water Demand Management  
+Environmental and Engineering Services  
+City of London  
+dhsia@london.ca
