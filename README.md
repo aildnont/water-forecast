@@ -457,7 +457,8 @@ packages.
 |   |   ├── preprocessed_example.csv <- Example of daily consumption estimates (i.e. preprocessed data)
 │   ├── raw                          <- Raw data
 |   |   ├── info                     <- Files containing details on raw data
-|   |   |   └── data_dictionary.xlsx <- Description of fields in our raw data
+|   |   |   ├── data_dictionary.xlsx <- Description of fields in our raw data
+|   |   |   └── sample_raw_data.csv  <- An example of our raw data files (with synthetic data)
 |   |   ├── intermediate             <- Raw data that has been merged during preprocessing
 |   |   └── quarterly                <- Raw data CSV files (where new raw data CSVs are placed)
 │   └── serializations               <- Serialized sklearn transformers
