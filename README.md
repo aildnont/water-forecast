@@ -702,7 +702,8 @@ maross@london.ca
 
 **Blake VanBerlo**  
 Data Scientist  
-City of London Research and Development Lab  
+AI Research and Development Lab,
+City of London
 vanberloblake@gmail.com
 
 **Daniel Hsia**  
