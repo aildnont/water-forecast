@@ -3,8 +3,7 @@
 London, Canada")
 
 The purpose of this project is to deliver a machine learning solution to
-forecasting aggregate water demand. This work was led by the Artificial
-Intelligence Research and Development Lab out of the Information
+forecasting aggregate water demand. This work was led by the Municipal Artificial Intelligence Applications Lab out of the Information
 Technology Services division. This repository contains the code used to
 fit multiple types of machine learning models to predict future daily
 water consumption. This repository is intended to serve as an example
@@ -702,7 +701,7 @@ maross@london.ca
 
 **Blake VanBerlo**  
 Data Scientist  
-AI Research and Development Lab  
+Municipal Artificial Intelligence Applications Lab    
 City of London  
 vanberloblake@gmail.com
 
