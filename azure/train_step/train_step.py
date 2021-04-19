@@ -2,6 +2,7 @@ import os
 import argparse
 import yaml
 import shutil
+import datetime
 from azureml.core import Run
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -18,7 +19,7 @@ args = parser.parse_args()
 run = Run.get_context()
 
 # All outputs from this run will be in the same directory
-DESTINATION_DIR = args.trainoutputdir
+DESTINATION_DIR = args.trainoutputdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/' # All outputs from this run go in a new folder
 if not os.path.exists(DESTINATION_DIR):
     os.makedirs(DESTINATION_DIR)
 
