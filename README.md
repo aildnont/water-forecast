@@ -697,13 +697,12 @@ Manager, Artificial Intelligence
 Information Technology Services, City Manager’s Office  
 City of London  
 Suite 300 - 201 Queens Ave, London, ON. N6A 1J1  
-maross@london.ca
 
 **Blake VanBerlo**  
 Data Scientist  
 Municipal Artificial Intelligence Applications Lab    
 City of London  
-vanberloblake@gmail.com
+blake@vanberloconsulting.com
 
 **Daniel Hsia**  
 Manager, Water Demand Management  
