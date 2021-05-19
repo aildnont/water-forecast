@@ -3,6 +3,7 @@ import argparse
 import yaml
 import shutil
 import datetime
+from distutils.dir_util import copy_tree
 from azureml.core import Run
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -20,8 +21,11 @@ run = Run.get_context()
 
 # All outputs from this run will be in the same directory
 DESTINATION_DIR = args.trainoutputdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/' # All outputs from this run go in a new folder
+LATEST_OUTPUTS_DIR = args.trainoutputdir + 'latest/'                                            # Folder to copy latest outputs to
 if not os.path.exists(DESTINATION_DIR):
     os.makedirs(DESTINATION_DIR)
+if not os.path.exists(LATEST_OUTPUTS_DIR):
+    os.makedirs(LATEST_OUTPUTS_DIR)
 
 # Keep track of updated preprocessed data
 PREPROCESSED_OUTPUT_DIR = args.preprocessedoutputdir
@@ -88,6 +92,9 @@ for rate_class in RATE_CLASSES:
     # Keep a copy of preprocessed data in persistent blob storage for this run and update the historical preprocessed dataset for this rate class
     shutil.copy(cfg['PATHS']['PREPROCESSED_DATA'], rc_preprocessed_dir)
     shutil.move(cfg['PATHS']['PREPROCESSED_DATA'], rc_destination_dir)
+    
+    # Copy all outputs to latest outputs directory
+    copy_tree(DESTINATION_DIR, LATEST_OUTPUTS_DIR)
 
     # Send an email to relevant parties indicating completion of training
     email_content = 'Hello,\n\nThe water demand forecasting model has successfully trained.'
