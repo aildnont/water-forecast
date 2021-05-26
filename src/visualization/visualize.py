@@ -45,13 +45,14 @@ def visualize_silhouette_plot(k_range, silhouette_scores, optimal_k, save_fig=Fa
     return
 
 
-def plot_model_evaluation(forecast_df, model_name, metrics, save_dir=None, figsize=(20,13), save_fig=False):
+def plot_model_evaluation(forecast_df, model_name, metrics, save_dir=None, figsize=(20,13), save_fig=False, train_date=''):
     '''
     Plot model's predictions on training and test sets, along with key performance metrics.
     :param forecast_df: DataFrame consisting of predicted and ground truth consumption values
     :param model_name: model identifier
     :param metrics: key performance metrics
     :param figsize: size of matplotlib figure
+    :param train_date: string representing date model was trained
     '''
 
     fig = plt.figure(figsize=figsize)
@@ -93,7 +94,7 @@ def plot_model_evaluation(forecast_df, model_name, metrics, save_dir=None, figsi
     if save_fig:
         save_dir = cfg['PATHS']['FORECAST_VISUALIZATIONS'] if save_dir is None else save_dir
         plt.savefig(save_dir + '/' + model_name + '_eval_' +
-                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+                    train_date + '.png')
     return
 
 
@@ -277,12 +278,13 @@ def plot_bayesian_hparam_opt(model_name, hparam_names, search_results, save_fig=
                     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
 
 
-def plot_prophet_components(prophet_model, forecast, save_dir=None):
+def plot_prophet_components(prophet_model, forecast, save_dir=None, train_date=''):
     '''
     Plot Prophet model's forecast components. This plot visualizes trend, yearly seasonality, weekly seasonality,
     holiday effects
     :param prophet_model: Fitted Prophet model
     :param forecast: A forecast from a Prophet model
+    :param train_date: string representing date model was trained
     '''
 
     fig = prophet_model.plot_components(forecast)
@@ -290,11 +292,11 @@ def plot_prophet_components(prophet_model, forecast, save_dir=None):
     fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
     save_dir = cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'] if save_dir is None else save_dir
     plt.savefig(save_dir + 'Prophet_components' +
-                datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+                train_date + '.png')
     return
 
 
-def plot_prophet_forecast(prophet_model, prophet_pred, save_dir=None):
+def plot_prophet_forecast(prophet_model, prophet_pred, save_dir=None, train_date=''):
     '''
     Plot Prophet model's forecast using the Prophet API, including changepoints
     :param prophet_model: Fitted Prophet model
@@ -311,5 +313,5 @@ def plot_prophet_forecast(prophet_model, prophet_pred, save_dir=None):
     fig.tight_layout(pad=2, rect=(0, 0, 1, 0.95))
     save_dir = cfg['PATHS']['FORECAST_VISUALIZATIONS'] if save_dir is None else save_dir
     plt.savefig(save_dir + 'Prophet_API_forecast' +
-                datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '.png')
+                train_date + '.png')
     return

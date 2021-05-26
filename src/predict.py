@@ -50,13 +50,13 @@ def forecast(days, cfg=None, model=None, save=False):
         recent_data = None
     results = model.forecast(days, recent_data=recent_data)
     if model.name == 'Prophet':
-        plot_prophet_forecast(model.model, model.future_prediction, save_dir=cfg['PATHS']['FORECAST_VISUALIZATIONS'])
+        plot_prophet_forecast(model.model, model.future_prediction, save_dir=cfg['PATHS']['FORECAST_VISUALIZATIONS'], train_date=model.train_date)
         model.future_prediction.to_csv(cfg['PATHS']['PREDICTIONS'] + 'detailed_forecast_' + model_name + '_' + str(days) + 'd_' +
-               datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.csv',
+               model.train_date + '.csv',
                index=False, index_label=False)
     if save:
         results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(days) + 'd_' +
-                       datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.csv',
+                       model.train_date + '.csv',
                        index=False, index_label=False)
     return results
 
