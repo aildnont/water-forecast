@@ -55,7 +55,7 @@ def load_dataset(cfg, fixed_test_set=False):
     return train_df, test_df
 
 
-def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, write_logs=False, save_metrics=False):
+def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, write_logs=False, save_metrics=False, dated_paths=True):
     '''
     Train a model
     :param cfg: Project config
@@ -66,10 +66,13 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
     :param save_model: Flag indicating whether to save the model
     :param write_logs: Flag indicating whether to write any training logs to disk
     :param save_metrics: Flag indicating whether to save the forecast metrics to a CSV
+    :param dated_paths: Flag indicating whether to include train date in outputs paths
     :return: Dictionary of test set forecast metrics
     '''
     log_dir = cfg['PATHS']['LOGS'] if write_logs else None
     model = model_def(hparams, log_dir=log_dir)  # Create instance of model
+    if not dated_paths:
+        model.train_date = ''
 
     # Fit the model
     if model.univariate:
@@ -93,7 +96,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
 
 
 
-def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_metrics=False, fixed_test_set=False):
+def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_metrics=False, fixed_test_set=False, dated_paths=True):
     '''
     Train a single model. Use the passed hyperparameters if possible; otherwise, use those in config.
     :param cfg: Project config
@@ -102,6 +105,7 @@ def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_met
     :param write_logs: Flag indicating whether to write any training logs to disk
     :param save_metrics: Flag indicating whether to save the forecast metrics to a CSV
     :param fixed_test_set: Flag indicating whether to use a fixed number of days for test set
+    :param dated_paths: Whether to include current datetime in persistent storage paths
     :return: Dictionary of test set forecast metrics
     '''
     train_df, test_df = load_dataset(cfg, fixed_test_set=fixed_test_set)
@@ -109,7 +113,7 @@ def train_single(cfg, hparams=None, save_model=False, write_logs=False, save_met
     if hparams is None:
         hparams = cfg['HPARAMS'][cfg['TRAIN']['MODEL'].upper()]
     test_forecast_metrics, model = train_model(cfg, model_def, hparams, train_df, test_df, save_model=save_model,
-                                        write_logs=write_logs, save_metrics=save_metrics)
+                                        write_logs=write_logs, save_metrics=save_metrics, dated_paths=dated_paths)
     print('Test forecast metrics: ', test_forecast_metrics)
     return test_forecast_metrics, model
 

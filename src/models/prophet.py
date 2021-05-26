@@ -73,7 +73,7 @@ class ProphetModel(ModelStrategy):
                                   how="left").rename(columns={'yhat': 'forecast', 'y': 'gt'}).set_index("ds")
         df_forecast = df_train.append(df_test)
         test_metrics = self.evaluate_forecast(df_forecast, save_dir=save_dir, plot=plot)
-        plot_prophet_forecast(self.model, self.future_prediction, save_dir=save_dir)
+        plot_prophet_forecast(self.model, self.future_prediction, save_dir=save_dir, train_date=self.train_date)
         return test_metrics
 
 

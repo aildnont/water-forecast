@@ -5,8 +5,6 @@ import shutil
 import datetime
 from distutils.dir_util import copy_tree
 from azureml.core import Run
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 from src.train import *
 from src.predict import *
 
@@ -20,12 +18,12 @@ args = parser.parse_args()
 run = Run.get_context()
 
 # All outputs from this run will be in the same directory
-DESTINATION_DIR = args.trainoutputdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/' # All outputs from this run go in a new folder
-LATEST_OUTPUTS_DIR = args.trainoutputdir + 'latest/'                                            # Folder to copy latest outputs to
+DATED_OUTPUTS_DIR = args.trainoutputdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '/' # All outputs from this run go in a new folder
+DESTINATION_DIR = args.trainoutputdir + 'latest/'                                                 # Folder to save latest outputs to
 if not os.path.exists(DESTINATION_DIR):
     os.makedirs(DESTINATION_DIR)
-if not os.path.exists(LATEST_OUTPUTS_DIR):
-    os.makedirs(LATEST_OUTPUTS_DIR)
+if not os.path.exists(DATED_OUTPUTS_DIR):
+    os.makedirs(DATED_OUTPUTS_DIR)
 
 # Keep track of updated preprocessed data
 PREPROCESSED_OUTPUT_DIR = args.preprocessedoutputdir
@@ -65,7 +63,7 @@ for rate_class in RATE_CLASSES:
     # Train a model, using a fixed size test set and save the metrics, along with test set forecast visualization
     cfg['DATA']['TEST_DAYS'] = TEST_DAYS      # Test set is half a year
     cfg['TRAIN']['INTERPRETABILITY'] = True   
-    test_forecast_metrics, _ = train_single(cfg, save_model=True, save_metrics=True, fixed_test_set=True)
+    test_forecast_metrics, _ = train_single(cfg, save_model=True, save_metrics=True, fixed_test_set=True, dated_paths=False)
 
     # Record test forecast metrics
     for metric in test_forecast_metrics:
@@ -84,7 +82,7 @@ for rate_class in RATE_CLASSES:
     # Train a model using all available data
     cfg['DATA']['TEST_DAYS'] = 0
     cfg['TRAIN']['INTERPRETABILITY'] = True   # Ensure model components are saved
-    _, model = train_single(cfg, save_model=True, save_metrics=False, fixed_test_set=True)
+    _, model = train_single(cfg, save_model=True, save_metrics=False, fixed_test_set=True, dated_paths=False)
 
     # Produce a water consumption forecast and save it
     forecast(FORECAST_DAYS, cfg=cfg, model=model, save=True)
@@ -93,20 +91,6 @@ for rate_class in RATE_CLASSES:
     shutil.copy(cfg['PATHS']['PREPROCESSED_DATA'], rc_preprocessed_dir)
     shutil.move(cfg['PATHS']['PREPROCESSED_DATA'], rc_destination_dir)
     
-    # Copy all outputs to latest outputs directory
-    copy_tree(DESTINATION_DIR, LATEST_OUTPUTS_DIR)
-
-    # Send an email to relevant parties indicating completion of training
-    email_content = 'Hello,\n\nThe water demand forecasting model has successfully trained.'
-    cfg_private = yaml.full_load(open("./config-private.yml", 'r'))  # Load private config data
-    message = Mail(from_email='COLWaterForecastModelAlerts@no-reply.ca', to_emails=cfg_private['EMAIL']['TO_EMAILS_COMPLETION'],
-                   subject='Water demand forecasting training pipeline complete', html_content=email_content)
-    for email_address in cfg_private['EMAIL']['CC_EMAILS_COMPLETION']:
-        message.add_cc(email_address)
-    try:
-        sg = SendGridAPIClient(cfg_private['EMAIL']['SENDGRID_API_KEY'])
-        response = sg.send(message)
-    except Exception as e:
-        print('Could not send email indicating training completion. Encountered the following error:\n\n', e)
-
+    # Copy all outputs to a dated folder for logging purposes
+    copy_tree(DESTINATION_DIR, DATED_OUTPUTS_DIR)
 
