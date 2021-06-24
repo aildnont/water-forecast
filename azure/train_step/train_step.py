@@ -89,7 +89,7 @@ for rate_class in RATE_CLASSES:
     
     # Keep a copy of preprocessed data in persistent blob storage for this run and update the historical preprocessed dataset for this rate class
     shutil.copy(cfg['PATHS']['PREPROCESSED_DATA'], rc_preprocessed_dir)
-    shutil.move(cfg['PATHS']['PREPROCESSED_DATA'], rc_destination_dir)
+    shutil.copy(cfg['PATHS']['PREPROCESSED_DATA'], os.path.join(rc_destination_dir, cfg['PATHS']['PREPROCESSED_DATA'].split('/')[-1]))
     
     # Copy all outputs to a dated folder for logging purposes
     copy_tree(DESTINATION_DIR, DATED_OUTPUTS_DIR)
