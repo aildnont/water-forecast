@@ -36,6 +36,7 @@ DATA:
   START_TRIM: 242
   END_TRIM: 50
   MISSING_RANGES: [['2014-03-01', '2014-09-30'], ['2017-03-25', '2017-05-31']]
+  MERGED_DATA_YEARS: 5
 
 # Training experiments
 TRAIN:
