@@ -1,9 +1,9 @@
 # Relevant file/directory paths
 PATHS:
   RAW_DATA_DIR: 'data/raw/quarterly/'
-  RAW_DATASET: 'data/raw/intermediate/all/raw_data.csv'
+  RAW_DATASET: 'data/raw/all/raw_data.csv'
   FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
-  PREPROCESSED_DATA: 'data/preprocessed/all/preprocessed_data.csv'
+  PREPROCESSED_DATA: 'data/preprocessed/all/preprocessed_data_2split_0.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
@@ -31,7 +31,8 @@ DATA:
   CATEGORICAL_FEATS: ['RATE_CLASS', 'METER_SIZE', 'INST_TYPE', 'EST_READ']
   BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
                   'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
-  TEST_FRAC: 0.1
+  CONSUMPTION_PERIOD: 'monthly'   # One of {'monthly', 'daily}
+  TEST_FRAC: 0.25
   TEST_DAYS: 183
   START_TRIM: 242
   END_TRIM: 50

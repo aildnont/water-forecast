@@ -2,9 +2,11 @@ import os
 import pandas as pd
 import yaml
 import glob
+import calendar
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
+from sklearn.model_selection import KFold
 
 def load_raw_data(cfg, save_raw_df=True, rate_class='all'):
     '''
@@ -95,19 +97,19 @@ def calculate_ts_data(cfg, raw_df, start_date=None):
 
     # Determine feature names for preprocessed dataset
     date_range = pd.date_range(start=min_date, end=max_date)
-    daily_df_feat_init = {'Date': date_range, 'Consumption': 0}
+    ts_df_feat_init = {'Date': date_range, 'Consumption': 0}
 
     for f in num_feats:
-        daily_df_feat_init[f + '_avg'] = 0.0
-        daily_df_feat_init[f + '_std'] = 0.0
+        ts_df_feat_init[f + '_avg'] = 0.0
+        ts_df_feat_init[f + '_std'] = 0.0
     for f in bool_feats:
-        daily_df_feat_init[f] = 0.0
+        ts_df_feat_init[f] = 0.0
     for f in cat_feats:
         for val in raw_df[f].unique():
-            daily_df_feat_init[f + '_' + str(val)] = 0.0
+            ts_df_feat_init[f + '_' + str(val)] = 0.0
 
-    daily_df = pd.DataFrame(daily_df_feat_init)
-    daily_df.set_index('Date', inplace=True)
+    ts_df = pd.DataFrame(ts_df_feat_init)
+    ts_df.set_index('Date', inplace=True)
 
     def daily_consumption(cons, start_date, end_date):
         bill_period = (end_date - start_date + timedelta(days=1)).days      # Get length of billing period
@@ -117,35 +119,52 @@ def calculate_ts_data(cfg, raw_df, start_date=None):
             return 0
 
     # Populating features for daily prediction
+    print("Creating daily records.")
     for date in tqdm(date_range):
         daily_snapshot = raw_df.loc[(raw_df['EFFECTIVE_DATE'] <= date) & (raw_df['END_DATE'] >= date)]
 
         for f in num_feats:
-            daily_df.loc[date, f + '_avg'] = daily_snapshot[f].mean()
-            daily_df.loc[date, f + '_std'] = daily_snapshot[f].std()
+            ts_df.loc[date, f + '_avg'] = daily_snapshot[f].mean()
+            ts_df.loc[date, f + '_std'] = daily_snapshot[f].std()
         for f in bool_feats:
-            daily_df.loc[date, f] = daily_snapshot[f].mean()
+            ts_df.loc[date, f] = daily_snapshot[f].mean()
         for f in cat_feats:
             fractions = daily_snapshot[f].value_counts(normalize=True)
             for val, fraction in fractions.items():
-                daily_df.loc[date, f + '_' + str(val)] = fraction
+                ts_df.loc[date, f + '_' + str(val)] = fraction
 
         try:
-            daily_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
+            ts_df.loc[date, 'Consumption'] = (daily_snapshot.apply(lambda row : daily_consumption(row['CONSUMPTION'],
                          row['EFFECTIVE_DATE'], row['END_DATE']), axis=1)).sum()
         except Exception as e:
             print(date, e)
-            daily_df.loc[date, 'Consumption'] = 0.0
+            ts_df.loc[date, 'Consumption'] = 0.0
 
-    # TODO delete once we have no missing data
+    ts_df = ts_df[cfg['DATA']['START_TRIM']:-cfg['DATA']['END_TRIM']]
+
+    # If desired, aggregate daily records to produce monthly estimates
+    print("Before monthly collapse: {}".format(ts_df["Consumption"].sum()))
+    if cfg['DATA']['CONSUMPTION_PERIOD'] == 'monthly':
+        print("Aggregating daily records into monthly records.")
+        agg_dict = {f: 'sum' if f == 'Consumption' else 'mean' for f in ts_df.columns}
+        ts_df = ts_df.resample('M').agg(agg_dict)   # Sum the consumption estimates for each month and average the other features
+        print("After monthly collapse: {}".format(ts_df["Consumption"].sum()))
+        ts_df = ts_df[1:-1]                         # Remove first and last entries due to billing period overlaps
+
     for missing_range_endpts in cfg['DATA']['MISSING_RANGES']:
-        missing_range = pd.date_range(pd.to_datetime(missing_range_endpts[0]), pd.to_datetime(missing_range_endpts[1]))
-        daily_df = daily_df[~daily_df.index.isin(missing_range)] # Remove noise from missing date ranges
+        missing_range_endpts[0] = pd.to_datetime(missing_range_endpts[0])
+        missing_range_endpts[1] = pd.to_datetime(missing_range_endpts[1])
+        if cfg['DATA']['CONSUMPTION_PERIOD'] == 'monthly':
+            missing_range_endpts[0] = missing_range_endpts[0].replace(day=1)
+            missing_range_endpts[1] = missing_range_endpts[1].replace(day=calendar.monthrange(missing_range_endpts[1].year,
+                                                                                              missing_range_endpts[1].month)[1])
+        missing_range = pd.date_range(missing_range_endpts[0], missing_range_endpts[1])
+        ts_df = ts_df[~ts_df.index.isin(missing_range)] # Remove noise from missing date ranges
 
-    return daily_df
+    return ts_df
 
 
-def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None):
+def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='all', out_path=None, n_splits=1):
     '''
     Transform raw water demand data into a time series dataset ready to be fed into a model.
     :param cfg: project config
@@ -161,11 +180,27 @@ def preprocess_ts(cfg=None, save_raw_df=True, save_prepr_df=True, rate_class='al
         cfg = yaml.full_load(open("./config.yml", 'r'))       # Load project config data
 
     raw_df = load_raw_data(cfg, rate_class=rate_class, save_raw_df=save_raw_df)
-    preprocessed_df = calculate_ts_data(cfg, raw_df)
-    preprocessed_df = preprocessed_df[cfg['DATA']['START_TRIM']:-cfg['DATA']['END_TRIM']]
-    if save_prepr_df:
-        out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
-        preprocessed_df.to_csv(out_path, sep=',', header=True)
+
+    if n_splits > 1:
+        all_clients = raw_df['CONTRACT_ACCOUNT'].unique()
+        k_fold = KFold(n_splits=n_splits, shuffle=True)
+        fold = 0
+        for _, fold_index in k_fold.split(all_clients):
+            print(f"Preprocessing fold {fold}")
+            clients = all_clients[fold_index]
+            fold_raw_df = raw_df[raw_df['CONTRACT_ACCOUNT'].isin(clients)]
+
+            preprocessed_df = calculate_ts_data(cfg, fold_raw_df)
+            if save_prepr_df:
+                out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
+                out_path = out_path.replace('.csv', '_' + str(fold) + '.csv')
+                preprocessed_df.to_csv(out_path, sep=',', header=True)
+            fold += 1
+    else:
+        preprocessed_df = calculate_ts_data(cfg, raw_df)
+        if save_prepr_df:
+            out_path = cfg['PATHS']['PREPROCESSED_DATA'] if out_path is None else out_path
+            preprocessed_df.to_csv(out_path, sep=',', header=True)
 
     print("Done. Runtime = ", ((datetime.today() - run_start).seconds / 60), " min")
     return preprocessed_df
@@ -223,12 +258,22 @@ def merge_raw_data(cfg=None):
         
     # Loop through all raw data files and concatenate them with the old merged one, de-duplicating rows as needed
     quarterly_raw_data_filenames = glob.glob(cfg['PATHS']['RAW_DATA_DIR'] + "/*.csv")
-    for filename in tqdm(quarterly_raw_data_filenames):
+    for filename in tqdm(quarterly_raw_data_filenames[:4]):
         quarterly_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
         quarterly_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(quarterly_raw_df['EFFECTIVE_DATE'], errors='coerce')
         quarterly_raw_df['END_DATE'] = pd.to_datetime(quarterly_raw_df['END_DATE'], errors='coerce')
-        merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True)
-        merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
+        if merged_raw_df.shape[0] == 0:
+            merged_raw_df = quarterly_raw_df
+            cols = merged_raw_df.columns
+        else:
+            cols = [c for c in cols if c in merged_raw_df.columns and c in quarterly_raw_df.columns]
+            merged_raw_df = merged_raw_df[cols]
+            merged_raw_df = merged_raw_df.reindex(sorted(merged_raw_df.columns), axis=1)
+            quarterly_raw_df = quarterly_raw_df[cols]
+            quarterly_raw_df = quarterly_raw_df.reindex(sorted(quarterly_raw_df.columns), axis=1)
+            merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True)
+            merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
+        print(filename, quarterly_raw_df.shape, merged_raw_df.shape)
     print('Shape of new merged raw data: ', merged_raw_df.shape)
 
     # Save the new merged raw data file
@@ -247,7 +292,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
     :return: DataFrame of client attributes and monthly consumption over the past year
     '''
 
-    print(raw_df['CONTRACT_ACCOUNT'].nunique())
+    print(f"{raw_df['CONTRACT_ACCOUNT'].nunique()} clients in total")
     if eval_date is None:
         eval_date = pd.to_datetime(cfg['K-PROTOTYPES']['EVAL_DATE'])
     min_date = eval_date - relativedelta(years=1)
@@ -287,7 +332,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
 
 if __name__ == '__main__':
-    df = preprocess_ts(rate_class='ins', save_raw_df=True, save_prepr_df=True)
-    #cfg = yaml.full_load(open("./config.yml", 'r'))
+    df = preprocess_ts(rate_class='all', save_raw_df=True, save_prepr_df=True, n_splits=2)
+    cfg = yaml.full_load(open("./config.yml", 'r'))
     #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)

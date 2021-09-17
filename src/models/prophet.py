@@ -36,8 +36,10 @@ class ProphetModel(ModelStrategy):
                     'upper_window': 1}))
             self.local_holidays = pd.concat(holiday_dfs)
 
-        model = Prophet(yearly_seasonality=True, holidays=self.local_holidays, changepoint_prior_scale=self.changepoint_prior_scale,
-                        seasonality_prior_scale=self.seasonality_prior_scale, holidays_prior_scale=self.holidays_prior_scale,
+        model = Prophet(yearly_seasonality=True, holidays=self.local_holidays,
+                        changepoint_prior_scale=self.changepoint_prior_scale,
+                        seasonality_prior_scale=self.seasonality_prior_scale,
+                        holidays_prior_scale=self.holidays_prior_scale,
                         seasonality_mode=self.seasonality_mode, changepoint_range=self.changepoint_range)
         model.add_country_holidays(country_name=self.country)   # Add country-wide holidays
         super(ProphetModel, self).__init__(model, univariate, name, log_dir=log_dir)
@@ -114,11 +116,13 @@ class ProphetModel(ModelStrategy):
         return
 
 
-    def decompose(self, components_save_dir, img_save_dir):
+    def decompose(self, components_save_dir, img_save_dir, include_weekly=True):
         '''
         Decompose model into its trend, holiday, weekly and yearly components. Generate a plot and save parameters.
         Creates a new directory within save_dir to capture all components of the model in separate files.
-        :param save_dir: Directory in which to save the results
+        :param components_save_dir: Directory in which to save the model components
+        :param components_save_dir: Directory in which to save the visualization of the model's components
+        :param include_weekly: Flag indicating whether to include the weekly seasonal component, if it exists
         '''
 
         if not self.model:
@@ -133,8 +137,9 @@ class ProphetModel(ModelStrategy):
             print("Creation of directory %s failed" % results_dir)
         self.future_prediction[['ds', 'trend']].to_csv(results_dir + 'trend_component.csv', sep=',', header=True, index=False)
         self.future_prediction[['ds', 'holidays']].to_csv(results_dir + 'holidays_component.csv', sep=',', header=True, index=False)
-        with open(results_dir + 'weekly_component.json', 'w') as fp:
-            json.dump(self.model.seasonalities['weekly'], fp)
+        if 'weekly' in self.model.seasonalities and include_weekly:
+            with open(results_dir + 'weekly_component.json', 'w') as fp:
+                json.dump(self.model.seasonalities['weekly'], fp)
         with open(results_dir + 'yearly_component.json', 'w') as fp:
             json.dump(self.model.seasonalities['yearly'], fp)
         plot_prophet_components(self.model, self.future_prediction, save_dir=img_save_dir)

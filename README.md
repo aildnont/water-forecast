@@ -442,6 +442,13 @@ data CSVs. We suggest that you convert any new feature names deviating
 from feature names in older CSVs to their older versions, prior to
 running preprocessing.
 
+#### 2. Unable to install Prophet package (`fbprophet`)
+Windows users can run into trouble when installing Prophet, due to a failure to properly import the `pystan` package. `fbprophet` is dependant on `pystan`. A potential fix is to install `fbprophet` from the `conda-forge` channel before installing the rest of the required packages in [requiremnts.txt](requirements.txt), as below:
+
+```
+conda install -c conda-forge fbprophet=0.7.1
+```
+
 ## Project Structure
 The project looks similar to the directory structure below. Disregard
 any _.gitkeep_ files, as their only purpose is to force Git to track

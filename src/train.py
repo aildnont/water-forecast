@@ -91,7 +91,8 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         
     # If we are training a Prophet model, decompose it and save the components' parameters and visualization
     if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
-        model.decompose(cfg['PATHS']['INTERPRETABILITY'], cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'])
+        include_weekly = cfg['DATA']['CONSUMPTION_PERIOD'] == 'weekly'
+        model.decompose(cfg['PATHS']['INTERPRETABILITY'], cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'], include_weekly)
     return test_forecast_metrics, model
 
 
