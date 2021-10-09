@@ -71,7 +71,15 @@ class SKLearnModel(ModelStrategy):
         consumption_idx = train_set.drop('Date', axis=1).columns.get_loc('Consumption')   # Index of consumption feature
         train_dates, X_train, Y_train = self.make_windowed_dataset(train_set)
         test_pred_dates, X_test, Y_test = self.make_windowed_dataset(pd.concat([train_set[-self.T_x:], test_set]))
-        test_dates = test_set['Date']
+        test_forecast_dates = test_set['Date']
+        prediction_dates = pd.date_range(train_set['Date'].iloc[-1] + pd.DateOffset(1), test_set['Date'].iloc[-1])
+
+        test_forecast_dates_list = test_set['Date'].to_list()
+        prediction_dates_list = prediction_dates.to_list()
+        forecast_date_idxs = []
+        for date in test_forecast_dates_list:
+            if date in prediction_dates_list:
+                forecast_date_idxs.append(prediction_dates_list.index(date))
 
         # Make predictions for training set and obtain forecast for test set
         train_preds = self.model.predict(X_train)
@@ -79,7 +87,7 @@ class SKLearnModel(ModelStrategy):
         if len(train_preds.shape) < 2:
             train_preds = np.expand_dims(train_preds, axis=1)
             test_preds = np.expand_dims(test_preds, axis=1)
-        test_forecast_df = self.forecast(test_dates.shape[0], recent_data=X_train[-1])
+        test_forecast_df = self.forecast(test_forecast_dates, prediction_dates, recent_data=X_train[-1])
 
         # Rescale data
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.inverse_transform(train_set.loc[:, train_set.columns != 'Date'])
@@ -90,8 +98,8 @@ class SKLearnModel(ModelStrategy):
         # Create a DataFrame of combined training set predictions and test set forecast with ground truth
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
-        df_test = pd.DataFrame({'ds': test_dates.tolist(), 'gt': test_set['Consumption'].tolist(),
-                                 'forecast': test_forecast_df['Consumption'].tolist(), 'test_pred': test_preds[:,consumption_idx].tolist()})
+        df_test = pd.DataFrame({'ds': test_forecast_dates.tolist(), 'gt': test_set['Consumption'].tolist(),
+                                 'forecast': test_forecast_df['Consumption'].tolist()}) # 'test_pred': test_preds[forecast_date_idxs,consumption_idx].tolist()
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast
@@ -99,12 +107,13 @@ class SKLearnModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days, recent_data=None):
+    def forecast(self, test_forecast_dates, prediction_dates, recent_data=None):
         '''
         Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
         The model makes a prediction for the provided example, then uses the result for the next prediction.
         Repeat this process for a specified number of days.
-        :param days: Number of days into the future to produce a forecast for
+        :param test_forecast_dates: Future dates to produce a forecast for
+        :prediction_dates: Future dates to predict
         :param recent_data: A factual example for the first prediction
         :return: An array of predictions
         '''
@@ -112,15 +121,18 @@ class SKLearnModel(ModelStrategy):
             raise Exception('Time series forecast requires input of shape (T_x, features).')
         if not (self.n_pred_feats and self.model):
             raise Exception('You must fit a model before forecasting.')
-        preds = np.zeros((days, self.n_pred_feats))
+        preds = np.zeros((test_forecast_dates.shape[0], recent_data.shape[0]))
         x = recent_data
-        for i in range(days):
-            y = self.model.predict(np.expand_dims(x, axis=0))
+        idx = 0
+        forecast_dates = test_forecast_dates.tolist()
+        for date in prediction_dates:
+            pred = self.model.predict(np.expand_dims(x, axis=0))
+            if date in forecast_dates:
+                preds[idx] = self.model.predict(np.expand_dims(x, axis=0))
+                idx += 1
             x = np.roll(x, -self.n_pred_feats)
-            preds[i] = y
-            x[-self.n_pred_feats:] = y   # Prediction becomes latest data in the example
+            x[-1] = pred   # Prediction becomes latest data in the example
         preds = self.standard_scaler.inverse_transform(preds)
-        forecast_dates = pd.date_range(self.forecast_start, periods=days).tolist()
         forecast_df = pd.DataFrame({'Date': forecast_dates, 'Consumption': preds[:,0].tolist()})
         return forecast_df
 

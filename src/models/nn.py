@@ -95,11 +95,19 @@ class NNModel(ModelStrategy):
         train_dates, X_train, Y_train = self.make_windowed_dataset(train_set)
         test_pred_dates, X_test, Y_test = self.make_windowed_dataset(pd.concat([train_set[-self.T_x:], test_set]))
         test_forecast_dates = test_set['Date']
+        prediction_dates = pd.date_range(train_set['Date'].iloc[-1] + pd.DateOffset(1), test_set['Date'].iloc[-1])
+
+        test_forecast_dates_list = test_set['Date'].to_list()
+        prediction_dates_list = prediction_dates.to_list()
+        forecast_date_idxs = []
+        for date in test_forecast_dates_list:
+            if date in prediction_dates_list:
+                forecast_date_idxs.append(prediction_dates_list.index(date))
 
         # Make predictions for training set and obtain forecast for test set
         train_preds = self.model.predict(X_train)
         test_preds = self.model.predict(X_test)
-        test_forecast_df = self.forecast(test_forecast_dates.shape[0], recent_data=X_train[-1])
+        test_forecast_df = self.forecast(test_forecast_dates, prediction_dates, recent_data=X_train[-1])
 
         # Rescale data
         train_set.loc[:, train_set.columns != 'Date'] = self.standard_scaler.inverse_transform(train_set.loc[:, train_set.columns != 'Date'])
@@ -111,7 +119,7 @@ class NNModel(ModelStrategy):
         df_train = pd.DataFrame({'ds': train_dates, 'gt': train_set.iloc[self.T_x:]['Consumption'],
                                  'model': train_preds[:,consumption_idx]})
         df_test = pd.DataFrame({'ds': test_forecast_dates.tolist(), 'gt': test_set['Consumption'].tolist(),
-                                 'forecast': test_forecast_df['Consumption'].tolist(), 'test_pred': test_preds[:,consumption_idx].tolist()})
+                                 'forecast': test_forecast_df['Consumption'].tolist()})  # 'test_pred': test_preds[forecast_date_idxs,consumption_idx].tolist()
         df_forecast = df_train.append(df_test)
 
         # Compute evaluation metrics for the forecast
@@ -119,25 +127,30 @@ class NNModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days, recent_data=None):
+    def forecast(self, test_forecast_dates, prediction_dates, recent_data=None):
         '''
         Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
         The model makes a prediction for the provided example, then uses the result for the next prediction.
         Repeat this process for a specified number of days.
-        :param days: Number of days into the future to produce a forecast for
+        :param test_forecast_dates: Future dates to produce a forecast for
+        :prediction_dates: Future dates to predict
         :param recent_data: A factual example for the first prediction
         :return: An array of predictions
         '''
         if recent_data is None:
             raise Exception('RNNs require an input of shape (T_x, features) to initiate forecasting.')
-        preds = np.zeros((days, recent_data.shape[1]))
+        preds = np.zeros((test_forecast_dates.shape[0], recent_data.shape[1]))
         x = recent_data
-        for i in range(days):
-            preds[i] = self.model.predict(np.expand_dims(x, axis=0))
+        idx = 0
+        forecast_dates = test_forecast_dates.tolist()
+        for date in prediction_dates:
+            pred = self.model.predict(np.expand_dims(x, axis=0))
+            if date in forecast_dates:
+                preds[idx] = self.model.predict(np.expand_dims(x, axis=0))
+                idx += 1
             x = np.roll(x, -1, axis=0)
-            x[-1] = preds[i]    # Prediction becomes latest data point in the example
+            x[-1] = pred    # Prediction becomes latest data point in the example
         preds = self.standard_scaler.inverse_transform(preds)
-        forecast_dates = pd.date_range(self.forecast_start, periods=days).tolist()
         forecast_df = pd.DataFrame({'Date': forecast_dates, 'Consumption': preds[:,0].tolist()})
         return forecast_df
 

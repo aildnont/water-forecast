@@ -45,8 +45,9 @@ def load_dataset(cfg, fixed_test_set=False):
             train_df = df[:int(df.shape[0])]
             test_df = df[int(df.shape[0]):]
         else:
-            train_df = df[:int(-cfg['DATA']['TEST_DAYS'])]
-            test_df = df[int(-cfg['DATA']['TEST_DAYS']):]
+            split_date = df['Date'].iloc[-1] - datetime.timedelta(days=cfg['DATA']['TEST_DAYS'])
+            train_df = df.loc[df['Date'] <= split_date]
+            test_df = df.loc[df['Date'] > split_date]
     else:
         train_df = df[:int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0])]
         test_df = df[int((1 - cfg['DATA']['TEST_FRAC']) * df.shape[0]):]
@@ -91,7 +92,7 @@ def train_model(cfg, model_def, hparams, train_df, test_df, save_model=False, wr
         
     # If we are training a Prophet model, decompose it and save the components' parameters and visualization
     if cfg['TRAIN']['INTERPRETABILITY'] and model.name == 'Prophet':
-        include_weekly = cfg['DATA']['CONSUMPTION_PERIOD'] == 'weekly'
+        include_weekly = cfg['TRAIN']['CONSUMPTION_PERIOD'] == 'weekly'
         model.decompose(cfg['PATHS']['INTERPRETABILITY'], cfg['PATHS']['INTERPRETABILITY_VISUALIZATIONS'], include_weekly)
     return test_forecast_metrics, model
 
@@ -197,7 +198,7 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
 
             # Train the model and evaluate performance on test set
             model.fit(train_df)
-            test_metrics = model.evaluate(train_df, test_df, save_dir=None, plot=False)
+            test_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENT_VISUALIZATIONS'], plot=True)
             for metric in test_metrics:
                 if metric in metrics_df.columns:
                     metrics_df[metric][row_idx] = test_metrics[metric]
@@ -303,7 +304,7 @@ def train_experiment(cfg=None, experiment='single_train', save_model=False, writ
 
     # Conduct the desired train experiment
     if experiment == 'train_single':
-        train_single(cfg, save_model=save_model, save_metrics=True, fixed_test_set=False)
+        train_single(cfg, save_model=save_model, save_metrics=True, fixed_test_set=True)
     elif experiment == 'train_all':
         train_all(cfg, save_models=save_model)
     elif experiment == 'hparam_search':

@@ -1,9 +1,10 @@
 # Relevant file/directory paths
 PATHS:
-  RAW_DATA_DIR: 'data/raw/quarterly/'
-  RAW_DATASET: 'data/raw/all/raw_data.csv'
+  RAW_DATA_DIR: 'B:/Datasets/h2o-forecast/raw/quarterly' #'data/raw/quarterly/'
+  RAW_DATASET: 'B:/Datasets/h2o-forecast/raw/all/raw_data.csv' #'data/raw/all/raw_data.csv'
   FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
-  PREPROCESSED_DATA: 'data/preprocessed/all/preprocessed_data_2split_0.csv'
+  PREPROCESSED_DIR: 'B:/Datasets/h2o-forecast/preprocessed/' #'data/preprocessed/'
+  PREPROCESSED_DATA: 'B:/Datasets/h2o-forecast/preprocessed/preprocessed_data_daily.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
@@ -31,9 +32,8 @@ DATA:
   CATEGORICAL_FEATS: ['RATE_CLASS', 'METER_SIZE', 'INST_TYPE', 'EST_READ']
   BOOLEAN_FEATS: ['SERVICE_STATUS', 'RES_LDM', 'RES_MDM', 'RES_HR', 'S90MT', 'FIRE_PROT_CHARGE_EXEMPT',
                   'CUST_ASST_PROG_EXEMPT', 'STORM_CHARGE_EX', 'SAN_CHARGE_EX', 'WATER_CHARGE_EX']
-  CONSUMPTION_PERIOD: 'monthly'   # One of {'monthly', 'daily}
   TEST_FRAC: 0.25
-  TEST_DAYS: 183
+  TEST_DAYS: 1461   # 4 years = 48 months = 1461 days
   START_TRIM: 242
   END_TRIM: 50
   MISSING_RANGES: [['2014-03-01', '2014-09-30'], ['2017-03-25', '2017-05-31']]
@@ -49,6 +49,7 @@ TRAIN:
     HPARAM_OBJECTIVE: 'MAPE'            # One of ['MAPE', 'MAE', 'MSE', 'RMSE']
     LAST_FOLDS: 4
   INTERPRETABILITY: true
+  CONSUMPTION_PERIOD: 'daily'
 
 # Forecasting
 FORECAST:
@@ -92,7 +93,7 @@ HPARAMS:
     UNIVARIATE: true
     T_X: 200
     BATCH_SIZE: 32
-    EPOCHS: 500
+    EPOCHS: 50
     PATIENCE: 15
     VAL_FRAC: 0.1
     LR: 0.00001
