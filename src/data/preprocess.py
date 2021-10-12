@@ -337,7 +337,7 @@ def prepare_for_clustering(cfg, raw_df, eval_date=None, save_df=True):
 
 
 if __name__ == '__main__':
-    daily_df, monthly_df = preprocess_ts(rate_class='all', save_raw_df=True, save_prepr_df=True, n_splits=1)
+    daily_df, monthly_df = preprocess_ts(rate_class='all', save_raw_df=True, save_prepr_df=False, n_splits=5)
     cfg = yaml.full_load(open("./config.yml", 'r'))
     #df = preprocess_new_data(cfg, save_raw_df=False, save_prepr_df=True, rate_class='all')
     #merge_raw_data(cfg)

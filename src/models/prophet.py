@@ -21,10 +21,11 @@ class ProphetModel(ModelStrategy):
         self.seasonality_mode = hparams.get('SEASONALITY_MODE', 'additive')
         self.changepoint_range = hparams.get('CHANGEPOINT_RANGE', 0.95)
         self.country = hparams.get('COUNTRY', 'CA')
+        self.freq = hparams.get('FREQ', 'D')
         self.future_prediction = None
 
         # Build DataFrame of local holidays
-        if hparams.get('HOLIDAYS', None) is None:
+        if hparams.get('HOLIDAYS', None) is None or self.freq == 'M':
             self.local_holidays = None
         else:
             holiday_dfs = []
@@ -36,12 +37,13 @@ class ProphetModel(ModelStrategy):
                     'upper_window': 1}))
             self.local_holidays = pd.concat(holiday_dfs)
 
-        model = Prophet(yearly_seasonality=True, holidays=self.local_holidays,
+        model = Prophet(yearly_seasonality=True, weekly_seasonality=False, holidays=self.local_holidays,
                         changepoint_prior_scale=self.changepoint_prior_scale,
                         seasonality_prior_scale=self.seasonality_prior_scale,
                         holidays_prior_scale=self.holidays_prior_scale,
                         seasonality_mode=self.seasonality_mode, changepoint_range=self.changepoint_range)
-        model.add_country_holidays(country_name=self.country)   # Add country-wide holidays
+        if self.freq == 'D':
+            model.add_country_holidays(country_name=self.country)   # Add country-wide holidays
         super(ProphetModel, self).__init__(model, univariate, name, log_dir=log_dir)
 
 
@@ -67,7 +69,7 @@ class ProphetModel(ModelStrategy):
         '''
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
-        df_prophet = self.model.make_future_dataframe(periods=test_set.shape[0], include_history=True, freq='D')
+        df_prophet = self.model.make_future_dataframe(periods=test_set.shape[0], include_history=True, freq=self.freq)
         self.future_prediction = self.model.predict(df_prophet)
         df_train = train_set.merge(self.future_prediction[["ds", "yhat"]],
                                     how="left").rename(columns={'yhat': 'model', 'y': 'gt'}).set_index("ds")
@@ -79,7 +81,7 @@ class ProphetModel(ModelStrategy):
         return test_metrics
 
 
-    def forecast(self, days, recent_data=None):
+    def forecast(self, timesteps, recent_data=None):
         '''
         Create a forecast for the test set. Note that this is different than obtaining predictions for the test set.
         The model makes a prediction for the provided example, then uses the result for the next prediction.
@@ -88,7 +90,7 @@ class ProphetModel(ModelStrategy):
         :param recent_data: A factual example for the first prediction
         :return: An array of predictions
         '''
-        future_dates = self.model.make_future_dataframe(periods=days)
+        future_dates = self.model.make_future_dataframe(periods=timesteps, freq=self.freq)
         self.future_prediction = self.model.predict(future_dates)
         forecast_df = self.future_prediction[['ds', 'yhat']]
         forecast_df.rename(columns={'ds': 'Date', 'yhat': 'Consumption'}, inplace=True)
@@ -128,7 +130,7 @@ class ProphetModel(ModelStrategy):
         if not self.model:
             return
         if self.future_prediction is None:
-            df_prophet = self.model.make_future_dataframe(periods=0, include_history=True, freq='D') # Training set only
+            df_prophet = self.model.make_future_dataframe(periods=0, include_history=True, freq=self.freq) # Training set only
             self.future_prediction = self.model.predict(df_prophet)
         results_dir = components_save_dir + '/Prophet_components' + self.train_date + '/'
         try:
@@ -136,13 +138,14 @@ class ProphetModel(ModelStrategy):
         except OSError:
             print("Creation of directory %s failed" % results_dir)
         self.future_prediction[['ds', 'trend']].to_csv(results_dir + 'trend_component.csv', sep=',', header=True, index=False)
-        self.future_prediction[['ds', 'holidays']].to_csv(results_dir + 'holidays_component.csv', sep=',', header=True, index=False)
+        if self.freq == 'D':
+            self.future_prediction[['ds', 'holidays']].to_csv(results_dir + 'holidays_component.csv', sep=',', header=True, index=False)
         if 'weekly' in self.model.seasonalities and include_weekly:
             with open(results_dir + 'weekly_component.json', 'w') as fp:
                 json.dump(self.model.seasonalities['weekly'], fp)
         with open(results_dir + 'yearly_component.json', 'w') as fp:
             json.dump(self.model.seasonalities['yearly'], fp)
-        plot_prophet_components(self.model, self.future_prediction, save_dir=img_save_dir)
+        plot_prophet_components(self.model, self.future_prediction, save_dir=img_save_dir, train_date=self.train_date)
 
 
 

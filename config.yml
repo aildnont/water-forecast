@@ -4,7 +4,7 @@ PATHS:
   RAW_DATASET: 'B:/Datasets/h2o-forecast/raw/all/raw_data.csv' #'data/raw/all/raw_data.csv'
   FULL_RAW_DATASET: 'data/raw/full_raw_data.csv'
   PREPROCESSED_DIR: 'B:/Datasets/h2o-forecast/preprocessed/' #'data/preprocessed/'
-  PREPROCESSED_DATA: 'B:/Datasets/h2o-forecast/preprocessed/preprocessed_data_daily.csv'
+  PREPROCESSED_DATA: 'B:/Datasets/h2o-forecast/preprocessed/preprocessed_data_daily_4.csv'
   CLIENT_DATA: 'data/preprocessed/client_data.csv'
   CAT_FEAT_MAP: 'data/serializations/cat_feat_map.yml'
   MODELS: 'results/models/'
@@ -54,8 +54,8 @@ TRAIN:
 # Forecasting
 FORECAST:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
-  MODEL_PATH: './results/models/Prophet.pkl'
-  DAYS: 1461
+  MODEL_PATH: './results/models/Prophet_final_monthly.pkl'
+  TIMESTEPS: 48
 
 # Hyperparameters specific to individual models
 HPARAMS:
@@ -69,12 +69,13 @@ HPARAMS:
     HOLIDAYS:
       Family Day: ['2008-02-18', '2009-02-16', '2010-02-15', '2011-02-21', '2012-02-20', '2013-02-18', '2014-02-17',
                     '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19', '2019-02-18', '2020-02-17', '2021-02-15',
-                    '2022-02-21', '2023-02-20', '2024-02-19', '2025-02-17', '2026-02-16', '2027-02-15', '2028-02-21', 
+                    '2022-02-21', '2023-02-20', '2024-02-19', '2025-02-17', '2026-02-16', '2027-02-15', '2028-02-21',
                     '2029-02-19', '2030-02-18']
       Civic Holiday: ['2008-08-04', '2009-08-03', '2010-08-02', '2011-08-01', '2012-08-06', '2013-08-05',
                         '2014-08-04', '2015-08-03', '2016-08-01', '2017-08-07', '2018-08-06', '2019-08-05',
-                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05', '2025-08-04', 
+                        '2020-08-03', '2021-08-02', '2022-08-01', '2023-08-07', '2024-08-05', '2025-08-04',
                         '2026-08-03', '2027-08-02', '2028-08-07', '2029-08-06', '2030-08-05']
+    FREQ: 'D'
   ARIMA:
     AUTO_PARAMS: false
     P: 7
@@ -91,9 +92,9 @@ HPARAMS:
     M: 365
   LSTM:
     UNIVARIATE: true
-    T_X: 200
+    T_X: 200  # 7 months
     BATCH_SIZE: 32
-    EPOCHS: 50
+    EPOCHS: 500
     PATIENCE: 15
     VAL_FRAC: 0.1
     LR: 0.00001
@@ -133,7 +134,7 @@ HPARAMS:
     DROPOUT: 0.0
   LINEAR_REGRESSION:
     UNIVARIATE: true
-    T_X: 300
+    T_X: 10  # 300
   RANDOM_FOREST:
     UNIVARIATE: true
     T_X: 365

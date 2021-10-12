@@ -36,7 +36,7 @@ class ModelStrategy(object):
 
 
     @abstractmethod
-    def forecast(self, days, recent_data=None, start_date=None):
+    def forecast(self, timesteps, recent_data=None, start_date=None):
         '''
         Abstract method for forecasting with the model
         '''

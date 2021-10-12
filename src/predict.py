@@ -22,10 +22,10 @@ MODELS_DEFS = {
 }
 
 
-def forecast(days, cfg=None, model=None, save=False):
+def forecast(timesteps, cfg=None, model=None, save=False):
     '''
     Generate a forecast for a certain number of days
-    :param days: Length of forecast
+    :param timesteps: Length of forecast
     :param cfg: Project config
     :param model: Model object
     :param save: Flag indicating whether to save the forecast
@@ -48,14 +48,14 @@ def forecast(days, cfg=None, model=None, save=False):
         recent_data = model.get_recent_data(train_df)
     else:
         recent_data = None
-    results = model.forecast(days, recent_data=recent_data)
+    results = model.forecast(timesteps, recent_data=recent_data)
     if model.name == 'Prophet':
         plot_prophet_forecast(model.model, model.future_prediction, save_dir=cfg['PATHS']['FORECAST_VISUALIZATIONS'], train_date=model.train_date)
-        model.future_prediction.to_csv(cfg['PATHS']['PREDICTIONS'] + 'detailed_forecast_' + model_name + '_' + str(days) + 'd_' +
+        model.future_prediction.to_csv(cfg['PATHS']['PREDICTIONS'] + 'detailed_forecast_' + model_name + '_' + str(timesteps) +
                model.train_date + '.csv',
                index=False, index_label=False)
     if save:
-        results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(days) + 'd_' +
+        results.to_csv(cfg['PATHS']['PREDICTIONS'] + 'forecast_' + model_name + '_' + str(timesteps) +
                        model.train_date + '.csv',
                        index=False, index_label=False)
     return results
@@ -63,6 +63,6 @@ def forecast(days, cfg=None, model=None, save=False):
 
 if __name__ == '__main__':
     cfg = yaml.full_load(open("./config.yml", 'r'))
-    days = cfg['FORECAST']['DAYS']
-    forecast(days, cfg=cfg, save=True)
+    timesteps = cfg['FORECAST']['TIMESTEPS']
+    forecast(timesteps, cfg=cfg, save=True)
 

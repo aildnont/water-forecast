@@ -198,7 +198,7 @@ def cross_validation(cfg, dataset=None, metrics=None, model_name=None, hparams=N
 
             # Train the model and evaluate performance on test set
             model.fit(train_df)
-            test_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENT_VISUALIZATIONS'], plot=True)
+            test_metrics = model.evaluate(train_df, test_df, save_dir=cfg['PATHS']['EXPERIMENT_VISUALIZATIONS'], plot=False)
             for metric in test_metrics:
                 if metric in metrics_df.columns:
                     metrics_df[metric][row_idx] = test_metrics[metric]
