@@ -65,7 +65,7 @@ class ProphetModel(ModelStrategy):
         '''
         train_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
         test_set.rename(columns={'Date': 'ds', 'Consumption': 'y'}, inplace=True)
-        df_prophet = self.model.make_future_dataframe(periods=test_set.shape[0], include_history=True, freq='D')
+        df_prophet = pd.concat([train_set, test_set])[['ds']]
         self.future_prediction = self.model.predict(df_prophet)
         df_train = train_set.merge(self.future_prediction[["ds", "yhat"]],
                                     how="left").rename(columns={'yhat': 'model', 'y': 'gt'}).set_index("ds")

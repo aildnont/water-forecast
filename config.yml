@@ -35,7 +35,7 @@ DATA:
   TEST_DAYS: 183
   START_TRIM: 242
   END_TRIM: 50
-  MISSING_RANGES: [['2014-03-01', '2014-09-30'], ['2017-03-25', '2017-05-31']]
+  MISSING_RANGES: [['2014-03-01', '2014-09-30'], ['2017-03-25', '2017-05-31'], ['2021-09-02', '2021-11-17']]
 
 # Training experiments
 TRAIN:
@@ -53,7 +53,7 @@ TRAIN:
 FORECAST:
   MODEL: 'prophet'                      # One of ['prophet', 'lstm', 'gru', '1dcnn', 'arima', 'sarimax', 'random_forest', 'linear_regression']
   MODEL_PATH: './results/models/Prophet.pkl'
-  DAYS: 1461
+  DAYS: 2000
 
 # Hyperparameters specific to individual models
 HPARAMS:
