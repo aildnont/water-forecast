@@ -272,7 +272,7 @@ We were interested in investigating whether clients could be effectively
 clustered. We developed a separate preprocessing method that produced a
 feature vector for each client, including estimates of their monthly
 consumption over the past year, and other features pertaining to their
-water comsumption (e.g. meter type, land parcel area). Since our client
+water consumption (e.g. meter type, land parcel area). Since our client
 feature vectors consisted of numerical and categorical data, and in the
 spirit of minimizing time complexity,
 [k-prototypes](https://www.semanticscholar.org/paper/CLUSTERING-LARGE-DATA-SETS-WITH-MIXED-NUMERIC-AND-Huang/d42bb5ad2d03be6d8fefa63d25d02c0711d19728)
