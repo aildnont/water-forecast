@@ -1,4 +1,4 @@
-from fbprophet import Prophet
+from prophet import Prophet
 from dill import dump, load
 import pandas as pd
 import os

@@ -227,9 +227,15 @@ def merge_raw_data(cfg=None):
         quarterly_raw_df = pd.read_csv(filename, encoding='ISO-8859-1', low_memory=False)    # Load a water demand CSV
         quarterly_raw_df['EFFECTIVE_DATE'] = pd.to_datetime(quarterly_raw_df['EFFECTIVE_DATE'], errors='coerce')
         quarterly_raw_df['END_DATE'] = pd.to_datetime(quarterly_raw_df['END_DATE'], errors='coerce')
+        if merged_raw_df.shape[0] == 0:
+            merged_raw_df = pd.DataFrame(columns=quarterly_raw_df.columns)
         merged_raw_df = pd.concat([merged_raw_df, quarterly_raw_df], axis=0, ignore_index=True)
         merged_raw_df.drop_duplicates(['CONTRACT_ACCOUNT', 'EFFECTIVE_DATE', 'END_DATE'], keep='last', inplace=True)  # De-duplication
     print('Shape of new merged raw data: ', merged_raw_df.shape)
+    
+    # Discard all but last X years of data
+    oldest_timestamp = pd.Timestamp.today() - pd.DateOffset(years=cfg['DATA']['MERGED_DATA_YEARS'])
+    merged_raw_df = merged_raw_df.loc[merged_raw_df['END_DATE'] >= oldest_timestamp]
 
     # Save the new merged raw data file
     merged_raw_df.to_csv(cfg['PATHS']['FULL_RAW_DATASET'], sep=',', header=True, index_label=False, index=False)
