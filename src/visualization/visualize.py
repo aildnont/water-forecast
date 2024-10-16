@@ -8,7 +8,7 @@ import yaml
 import math
 import os
 from skopt.plots import plot_objective
-from fbprophet.plot import add_changepoints_to_plot
+from prophet.plot import add_changepoints_to_plot
 
 # Set some matplotlib parameters
 mpl.rcParams['figure.figsize'] = (20, 15)
